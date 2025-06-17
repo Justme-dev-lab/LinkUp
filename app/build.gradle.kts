@@ -59,5 +59,6 @@ dependencies {
     implementation("com.google.firebase:firebase-firestore")
     implementation("com.google.firebase:firebase-database-ktx")
     implementation("com.google.firebase:firebase-messaging:24.1.1")
+    implementation("com.google.firebase:firebase-storage-ktx:21.0.2")
 
 }
