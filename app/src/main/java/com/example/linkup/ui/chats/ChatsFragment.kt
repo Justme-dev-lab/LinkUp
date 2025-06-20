@@ -10,7 +10,6 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.linkup.databinding.FragmentChatsBinding
 import com.example.linkup.model.Chat
-import com.example.linkup.ui.chat.ChatActivity
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.DataSnapshot
@@ -36,27 +35,11 @@ class ChatsFragment : Fragment() {
         chatsViewModel = ViewModelProvider(this).get(ChatsViewModel::class.java)
         _binding = FragmentChatsBinding.inflate(inflater, container, false)
 
-        setupRecyclerView()
         loadChats()
         setupSearch()
         setupFloatingButton()
 
         return binding.root
-    }
-
-    private fun setupRecyclerView() {
-        chatAdapter = ChatAdapter(chatList) { chat ->
-            val intent = Intent(requireContext(), ChatActivity::class.java)
-            intent.putExtra("chatId", chat.id)
-            intent.putExtra("recipientId", chat.recipientId)
-            intent.putExtra("recipientName", chat.recipientName)
-            startActivity(intent)
-        }
-
-        binding.chatRecyclerView.apply {
-            layoutManager = LinearLayoutManager(requireContext())
-            adapter = chatAdapter
-        }
     }
 
     private fun loadChats() {
