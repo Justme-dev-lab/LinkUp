@@ -13,4 +13,15 @@
         <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
         <!-- Customize your theme here. -->
     </style>
+    <!-- ... tema aplikasi Anda ... -->
+
+    <style name="BottomNavigationView.Active" parent="TextAppearance.AppCompat.Caption">
+        <item name="android:textSize">10sp</item> <!-- Sesuaikan ukuran font -->
+        <!-- <item name="android:textColor">@color/your_active_text_color</item> -->
+    </style>
+
+    <style name="BottomNavigationView.Inactive" parent="TextAppearance.AppCompat.Caption">
+        <item name="android:textSize">10sp</item> <!-- Sesuaikan ukuran font -->
+        <!-- <item name="android:textColor">@color/your_inactive_text_color</item> -->
+    </style>
 </resources>

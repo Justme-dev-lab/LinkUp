@@ -5,5 +5,6 @@
     <dimen name="fab_margin">16dp</dimen>
     <dimen name="fab_bottom_margin">72dp</dimen>
     <dimen name="fab_size_plus_margin">72dp</dimen> <!-- Sesuaikan: ukuran FAB (56dp) + margin bawah (16dp) -->
-    <dimen name="default_bottom_nav_height">56dp</dimen> <!-- Sesuaikan dengan tinggi navbar -->
+    <dimen name="default_bottom_nav_height">56dp</dimen>
+    <dimen name="fab_margin_from_bottom_nav">16dp</dimen> <!-- Sesuaikan dengan tinggi navbar -->
 </resources>

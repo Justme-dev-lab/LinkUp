@@ -19,7 +19,6 @@ import java.util.Locale
 // Gunakan ListAdapter untuk efisiensi dengan DiffUtil
 class ChatAdapter(
     private val currentUserId: String?, // Teruskan currentUserId
-    currentUserId1: String?,
     private val onItemClick: (Chat) -> Unit
 ) : ListAdapter<Chat, ChatAdapter.ChatViewHolder>(ChatDiffCallback()), Filterable {
 
