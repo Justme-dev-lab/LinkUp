@@ -11,7 +11,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.example.linkup.R
 import com.example.linkup.model.Chat
-import com.example.linkup.utils.formatTimestamp
+import com.example.linkup.utils.DateUtils.formatTimestamp
 import java.util.Locale
 
 class ChatAdapter(

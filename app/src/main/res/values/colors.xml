@@ -8,4 +8,7 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
     <color name="oren">#FF9D00</color>
+    <color name="read_status">#4CAF50</color> <!-- Hijau -->
+    <color name="delivered_status">#2196F3</color> <!-- Biru -->
+    <color name="sent_status">#9E9E9E</color> <!-- Abu-abu -->
 </resources>
