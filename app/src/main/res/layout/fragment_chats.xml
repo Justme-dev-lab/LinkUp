@@ -4,12 +4,13 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:fitsSystemWindows="true"
     tools:context=".ui.chats.ChatsFragment">
 
     <!-- Header dengan nama aplikasi dan tombol profil -->
     <LinearLayout
         android:id="@+id/header_title"
-        android:layout_width="match_parent"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:padding="16dp"
@@ -19,69 +20,72 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
 
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="LinkUp"
-            android:textColor="@android:color/white"
-            android:textSize="28sp"
-            android:textStyle="bold" />
+    <TextView
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:text="LinkUp"
+        android:textColor="@android:color/white"
+        android:textSize="28sp"
+        android:textStyle="bold" />
 
-        <ImageButton
-            android:id="@+id/profileButton"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:background="@color/oren"
-            android:src="@drawable/ic_profile"
-            android:scaleType="centerCrop"
-            android:contentDescription="Profile picture"
-            />
+    <ImageButton
+        android:id="@+id/profileButton"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:src="@drawable/ic_profile"
+        android:scaleType="centerCrop"
+        android:contentDescription="Profile picture" />
+
     </LinearLayout>
 
-    <!-- Search Bar -->
+        <!-- Search Bar -->
     <SearchView
         android:id="@+id/searchView"
-        android:layout_width="match_parent"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_margin="8dp"
-        android:paddingLeft="-17dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginTop="8dp"
         android:queryHint="Search messages..."
         android:iconifiedByDefault="false"
-        app:layout_constraintTop_toBottomOf="@id/header_title"/>
+        app:layout_constraintTop_toBottomOf="@id/header_title"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
-    <!-- Daftar Chat -->
+        <!-- Daftar Chat -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/chatRecyclerView"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:padding="8dp"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:paddingTop="8dp"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
+        android:clipToPadding="false"
         app:layout_constraintTop_toBottomOf="@id/searchView"
-        tools:layout_editor_absoluteX="8dp" />
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        tools:listitem="@layout/item_chat" />
 
-    <!-- Floating Action Button -->
+        <!-- Floating Action Button (hanya yang ini, yang dari XML) -->
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fabNewChat"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_margin="16dp"
         android:layout_marginEnd="16dp"
-        android:layout_marginBottom="72dp"
+        android:layout_marginBottom="16dp"
         android:contentDescription="New chat"
-        android:elevation="8dp"
         android:src="@drawable/ic_add"
         app:backgroundTint="@color/oren"
-
-        app:layout_constraintBottom_toTopOf="@id/navbar"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:tint="@android:color/white" />
-
-    <com.google.android.material.imageview.ShapeableImageView
-        android:id="@+id/navbar"
-        android:layout_width="match_parent"
-        android:layout_height="56dp"
+        app:tint="@android:color/white"
         app:layout_constraintBottom_toBottomOf="parent"
-        />
+        app:layout_constraintEnd_toEndOf="parent"
+        app:elevation="6dp"
+        app:pressedTranslationZ="12dp" />
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+        <!-- HAPUS ShapeableImageView dengan ID navbar DARI SINI -->
+        <!-- Kita akan mengatur padding/margin di RecyclerView jika perlu agar tidak tertutup BottomNav dari Activity -->
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
