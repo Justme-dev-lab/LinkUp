@@ -84,18 +84,46 @@ class RegisterActivity : AppCompatActivity() {
 
                         database.child("users").child(it.uid).setValue(userData)
                             .addOnSuccessListener {
-                                Toast.makeText(this, "Registration successful", Toast.LENGTH_SHORT).show()
-                                startActivity(Intent(this, MainActivity::class.java))
+                                // Sign out the user after successful registration
+                                auth.signOut()
+
+                                Toast.makeText(
+                                    this,
+                                    "Registration successful! Please login",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+
+                                // Redirect to LoginActivity
+                                startActivity(Intent(this, LoginActivity::class.java))
                                 finish()
                             }
                             .addOnFailureListener { e ->
-                                Toast.makeText(this, "Failed to save user data: ${e.message}", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(
+                                    this,
+                                    "Failed to save user data: ${e.message}",
+                                    Toast.LENGTH_SHORT
+                                ).show()
                             }
                     }
                 } else {
-                    // Registration failed
-                    Toast.makeText(this, "Registration failed: ${task.exception?.message}",
-                        Toast.LENGTH_SHORT).show()
+                    // Handle registration errors
+                    when {
+                        task.exception?.message?.contains("already in use") == true -> {
+                            Toast.makeText(
+                                this,
+                                "Email already registered. Please login instead.",
+                                Toast.LENGTH_LONG
+                            ).show()
+                            startActivity(Intent(this, LoginActivity::class.java))
+                        }
+                        else -> {
+                            Toast.makeText(
+                                this,
+                                "Registration failed: ${task.exception?.message}",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    }
                 }
             }
     }
