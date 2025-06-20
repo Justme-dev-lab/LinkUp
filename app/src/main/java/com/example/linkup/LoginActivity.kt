@@ -54,21 +54,27 @@ class LoginActivity : AppCompatActivity() {
         val password = etPassword.text.toString().trim()
 
         if (email.isEmpty() || password.isEmpty()) {
-            Toast.makeText(this, "Please fill all fields", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Harap isi email dan password", Toast.LENGTH_SHORT).show()
             return
         }
 
+        // Tampilkan loading
+        Toast.makeText(this, "Memproses login...", Toast.LENGTH_SHORT).show()
+
         auth.signInWithEmailAndPassword(email, password)
-            .addOnCompleteListener(this) { task ->
+            .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
-                    // Login success
-                    Toast.makeText(this, "Login successful", Toast.LENGTH_SHORT).show()
+                    // Login berhasil
+                    Toast.makeText(this, "Login berhasil", Toast.LENGTH_SHORT).show()
                     startActivity(Intent(this, MainActivity::class.java))
                     finish()
                 } else {
-                    // Login failed
-                    Toast.makeText(this, "Login failed: ${task.exception?.message}",
-                        Toast.LENGTH_SHORT).show()
+                    // Login gagal
+                    Toast.makeText(
+                        this,
+                        "Login gagal: ${task.exception?.message}",
+                        Toast.LENGTH_LONG
+                    ).show()
                 }
             }
     }

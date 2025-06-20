@@ -61,69 +61,37 @@ class RegisterActivity : AppCompatActivity() {
         val email = etEmail.text.toString().trim()
         val password = etPassword.text.toString().trim()
 
+        // Validasi input
         if (username.isEmpty() || email.isEmpty() || password.isEmpty()) {
-            Toast.makeText(this, "Please fill all fields", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Harap isi semua field", Toast.LENGTH_SHORT).show()
             return
         }
 
         if (password.length < 6) {
-            Toast.makeText(this, "Password should be at least 6 characters", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Password minimal 6 karakter", Toast.LENGTH_SHORT).show()
             return
         }
 
+        // Tampilkan loading
+        Toast.makeText(this, "Mendaftarkan...", Toast.LENGTH_SHORT).show()
+
         auth.createUserWithEmailAndPassword(email, password)
-            .addOnCompleteListener(this) { task ->
+            .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
-                    // Registration success, save user data to database
+                    // Registrasi berhasil
                     val user = auth.currentUser
-                    user?.let {
-                        val userData = HashMap<String, Any>()
-                        userData["username"] = username
-                        userData["email"] = email
-                        userData["uid"] = it.uid
+                    Toast.makeText(this, "Registrasi berhasil!", Toast.LENGTH_SHORT).show()
 
-                        database.child("users").child(it.uid).setValue(userData)
-                            .addOnSuccessListener {
-                                // Sign out the user after successful registration
-                                auth.signOut()
-
-                                Toast.makeText(
-                                    this,
-                                    "Registration successful! Please login",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-
-                                // Redirect to LoginActivity
-                                startActivity(Intent(this, LoginActivity::class.java))
-                                finish()
-                            }
-                            .addOnFailureListener { e ->
-                                Toast.makeText(
-                                    this,
-                                    "Failed to save user data: ${e.message}",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            }
-                    }
+                    // Langsung redirect ke LoginActivity
+                    startActivity(Intent(this, LoginActivity::class.java))
+                    finish()
                 } else {
-                    // Handle registration errors
-                    when {
-                        task.exception?.message?.contains("already in use") == true -> {
-                            Toast.makeText(
-                                this,
-                                "Email already registered. Please login instead.",
-                                Toast.LENGTH_LONG
-                            ).show()
-                            startActivity(Intent(this, LoginActivity::class.java))
-                        }
-                        else -> {
-                            Toast.makeText(
-                                this,
-                                "Registration failed: ${task.exception?.message}",
-                                Toast.LENGTH_SHORT
-                            ).show()
-                        }
-                    }
+                    // Registrasi gagal
+                    Toast.makeText(
+                        this,
+                        "Registrasi gagal: ${task.exception?.message}",
+                        Toast.LENGTH_LONG
+                    ).show()
                 }
             }
     }

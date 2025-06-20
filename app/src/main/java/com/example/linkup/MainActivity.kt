@@ -17,44 +17,24 @@ import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 
 class MainActivity : AppCompatActivity() {
-
     private lateinit var binding: ActivityMainBinding
     private lateinit var auth: FirebaseAuth
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Initialize Firebase components
-        initializeFirebase()
+        // Inisialisasi Firebase Auth
+        auth = Firebase.auth
 
-        // Check if user is signed in, if not redirect to LoginActivity
+        // Cek apakah user sudah login
         if (auth.currentUser == null) {
-            redirectToLogin()
+            // Jika belum login, redirect ke LoginActivity
+            startActivity(Intent(this, LoginActivity::class.java))
+            finish()
             return
         }
 
-        setupUI()
-    }
-
-    private fun initializeFirebase() {
-        // Initialize Firebase Auth
-        auth = Firebase.auth
-
-        // Initialize Firebase App Check (debug version for development)
-        FirebaseAppCheck.getInstance().installAppCheckProviderFactory(
-            DebugAppCheckProviderFactory.getInstance()
-        )
-
-        // Optional: Set Firebase language
-        Firebase.auth.setLanguageCode("id") // or "en" for English
-    }
-
-    private fun redirectToLogin() {
-        startActivity(Intent(this, LoginActivity::class.java))
-        finish()
-    }
-
-    private fun setupUI() {
+        // Lanjut ke tampilan utama jika sudah login
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
