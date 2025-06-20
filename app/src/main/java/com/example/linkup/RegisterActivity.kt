@@ -61,7 +61,6 @@ class RegisterActivity : AppCompatActivity() {
         val email = etEmail.text.toString().trim()
         val password = etPassword.text.toString().trim()
 
-        // Validasi input
         if (username.isEmpty() || email.isEmpty() || password.isEmpty()) {
             Toast.makeText(this, "Harap isi semua field", Toast.LENGTH_SHORT).show()
             return
@@ -72,17 +71,11 @@ class RegisterActivity : AppCompatActivity() {
             return
         }
 
-        // Tampilkan loading
-        Toast.makeText(this, "Mendaftarkan...", Toast.LENGTH_SHORT).show()
-
         auth.createUserWithEmailAndPassword(email, password)
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
                     // Registrasi berhasil
-                    val user = auth.currentUser
                     Toast.makeText(this, "Registrasi berhasil!", Toast.LENGTH_SHORT).show()
-
-                    // Langsung redirect ke LoginActivity
                     startActivity(Intent(this, LoginActivity::class.java))
                     finish()
                 } else {
