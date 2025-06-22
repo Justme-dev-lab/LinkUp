@@ -66,6 +66,8 @@ dependencies {
     implementation("com.github.bumptech.glide:glide:4.16.0")
     implementation("com.google.firebase:firebase-appcheck:18.0.0")
     implementation("com.google.firebase:firebase-appcheck-ktx:18.0.0")
+    implementation ("com.squareup.picasso:picasso:2.71828")
+    implementation ("de.hdodenhof:circleimageview:3.1.0")
 // Untuk debug selama development
     implementation("com.google.firebase:firebase-appcheck-debug:18.0.0")
 

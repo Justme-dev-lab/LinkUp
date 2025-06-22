@@ -14,10 +14,16 @@ import com.example.linkup.ui.chats.BottomNavHeightListener
 import com.example.linkup.ui.chats.ChatsFragment // Import ChatsFragment untuk ActivityCallback
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.ktx.auth
+import com.google.firebase.database.DatabaseReference
 import com.google.firebase.ktx.Firebase
 
 class MainActivity : AppCompatActivity(), ChatsFragment.ActivityCallback { // Implementasikan ActivityCallback
+
+    var refUsers: DatabaseReference? = null
+    var firebaseUser: FirebaseUser? = null
+
 
     private lateinit var binding: ActivityMainBinding
     private lateinit var auth: FirebaseAuth
