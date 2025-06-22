@@ -3,6 +3,7 @@ package com.example.linkup
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
+import android.view.View
 import android.view.ViewTreeObserver
 import androidx.appcompat.app.AppCompatActivity
 import androidx.navigation.NavController
@@ -47,6 +48,13 @@ class MainActivity : AppCompatActivity(), ChatsFragment.ActivityCallback { // Im
         navController = navHostFragment.navController
 
         navView.setupWithNavController(navController)
+
+        // [TAMBAHAN] Set intent ke ProfileActivity saat tombol profileButton diklik
+        binding.root.findViewById<View>(R.id.profileButton)?.setOnClickListener {
+            val intent = Intent(this, ProfileActivity::class.java)
+            startActivity(intent)
+        }
+        // [TAMBAHAN SELESAI]
 
         // Dapatkan tinggi BottomNavigationView setelah di-layout
         navView.viewTreeObserver.addOnGlobalLayoutListener(object : ViewTreeObserver.OnGlobalLayoutListener {
