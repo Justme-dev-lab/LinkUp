@@ -1,6 +1,7 @@
 package com.example.linkup.ui.chats
 
 import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -14,12 +15,14 @@ import androidx.core.view.updateLayoutParams
 import androidx.core.view.updatePadding
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.example.linkup.ProfileActivity
 import com.example.linkup.R // Pastikan ini adalah R dari package aplikasi Anda
 import com.example.linkup.databinding.FragmentChatsBinding
 import com.example.linkup.model.Chat // Pastikan model Chat Anda benar
 // Import MainActivity jika Anda akan melakukan cast (activity as? MainActivity)
 // import com.example.linkup.MainActivity
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.DatabaseReference
@@ -30,6 +33,7 @@ import com.google.firebase.database.ValueEventListener
 // typealias MainActivityType = com.example.linkup.MainActivity // Ganti dengan path MainActivity Anda
 
 class ChatsFragment : Fragment(), BottomNavHeightListener {
+
 
     private var _binding: FragmentChatsBinding? = null
     private val binding get() = _binding!!
@@ -59,6 +63,10 @@ class ChatsFragment : Fragment(), BottomNavHeightListener {
             Log.e("ChatsFragment", "$context must implement ActivityCallback")
         }
     }
+
+
+
+
 
 
     override fun onCreateView(
@@ -115,7 +123,11 @@ class ChatsFragment : Fragment(), BottomNavHeightListener {
         }
 
         binding.profileButton.setOnClickListener {
-            // TODO: Implement navigation to profile screen
+            val intent = Intent(requireContext(), ProfileActivity::class.java)
+            startActivity(intent)
+
+
+
         }
     }
 
