@@ -8,6 +8,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.example.linkup.R
+import com.google.firebase.auth.FirebaseAuth
 
 class ProfileActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -25,5 +26,18 @@ class ProfileActivity : AppCompatActivity() {
             val backbtn = Intent(this@ProfileActivity, MainActivity::class.java)
             startActivity(backbtn)
         }
+
+        val logoutButton: Button = findViewById(R.id.logoutbtn) // misal ID-nya btnLogout
+        logoutButton.setOnClickListener {
+            FirebaseAuth.getInstance().signOut()
+            val intent = Intent(this@ProfileActivity, LoginActivity::class.java)
+            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            startActivity(intent)
+            finish()
+
+
+        }
     }
+
 }
+
