@@ -1,6 +1,7 @@
 package com.example.linkup.ui.chats
 
 import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -14,10 +15,14 @@ import androidx.core.view.updateLayoutParams
 import androidx.core.view.updatePadding
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.bumptech.glide.Glide
+import com.bumptech.glide.request.RequestOptions
+import com.example.linkup.ProfileActivity
 import com.example.linkup.R
 import com.example.linkup.databinding.FragmentChatsBinding
 import com.example.linkup.model.Chat
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.DatabaseReference
@@ -36,11 +41,13 @@ class ChatsFragment : Fragment(), BottomNavHeightListener {
     private lateinit var chatsReference: DatabaseReference
     private var chatsValueEventListener: ValueEventListener? = null
     private var currentUserId: String? = null
+    private var firebaseUser: FirebaseUser? = null // Untuk mendapatkan info user saat ini
 
     interface ActivityCallback {
         fun requestBottomNavHeight(listener: BottomNavHeightListener)
         fun clearBottomNavHeightListener(listener: BottomNavHeightListener)
     }
+
     private var activityCallback: ActivityCallback? = null
 
     override fun onAttach(context: Context) {
@@ -58,7 +65,8 @@ class ChatsFragment : Fragment(), BottomNavHeightListener {
         savedInstanceState: Bundle?
     ): View {
         _binding = FragmentChatsBinding.inflate(inflater, container, false)
-        currentUserId = FirebaseAuth.getInstance().currentUser?.uid
+        firebaseUser = FirebaseAuth.getInstance().currentUser
+        currentUserId = firebaseUser?.uid
         return binding.root
     }
 
@@ -68,41 +76,88 @@ class ChatsFragment : Fragment(), BottomNavHeightListener {
         setupRecyclerViewAdapter()
         setupRecyclerViewLayout()
         setupSearch()
-        setupFloatingButtonClickListener() // Panggil ini untuk setup listener FAB
+        setupFloatingButtonClickListener()
         applyStatusBarPaddingToHeader()
 
         activityCallback?.requestBottomNavHeight(this)
 
         ViewCompat.setOnApplyWindowInsetsListener(binding.root) { _, insets ->
-            Log.d("ChatsFragment", "OnApplyWindowInsetsListener triggered")
             val imeInsets = insets.getInsets(WindowInsetsCompat.Type.ime())
             val systemGestureInsets = insets.getInsets(WindowInsetsCompat.Type.systemGestures())
-
-            currentImeHeight = imeInsets.bottom // Langsung update
-
+            currentImeHeight = imeInsets.bottom
             val effectiveBottomNavHeight = currentBottomNavHeight + systemGestureInsets.bottom
             adjustViewsForBottomInsets(effectiveBottomNavHeight, currentImeHeight)
-            Log.d("ChatsFragment", "Adjusting from OnApplyWindowInsetsListener. EffectiveBNavH: $effectiveBottomNavHeight, IMEH: $currentImeHeight")
             insets
         }
 
         if (currentUserId != null) {
             attachChatsListener()
+            loadCurrentUserProfileImageToHeader() // Panggil di sini setelah currentUserId pasti ada
         } else {
-            Log.w("ChatsFragment", "User not logged in, cannot load chats.")
+            Log.w("ChatsFragment", "User not logged in, cannot load chats or profile image.")
+            // Set gambar default jika user tidak login (seharusnya tidak terjadi jika MainActivity meng-handle)
+            if (_binding != null) { // Cek null safety untuk binding
+                binding.profileButton.setImageResource(R.drawable.ic_profile) // ic_profile dari XML Anda
+            }
         }
 
         binding.profileButton.setOnClickListener {
-            // TODO: Implement navigation to profile screen
+            val intent = Intent(requireContext(), ProfileActivity::class.java)
+            startActivity(intent)
         }
     }
+
+    private fun loadCurrentUserProfileImageToHeader() {
+        // Pastikan currentUserId tidak null sebelum melanjutkan
+        val userId = currentUserId ?: return
+
+        val userRef = FirebaseDatabase.getInstance().getReference("users").child(userId)
+        userRef.addListenerForSingleValueEvent(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                if (snapshot.exists() && isAdded && _binding != null) {
+                    // Menggunakan kunci "profile" sesuai struktur database Anda
+                    val profileImageUrl = snapshot.child("profile").getValue(String::class.java)
+
+                    if (!profileImageUrl.isNullOrEmpty()) {
+                        Glide.with(requireContext())
+                            .load(profileImageUrl)
+                            .placeholder(R.drawable.ic_profile) // Placeholder default dari XML
+                            //.error(R.drawable.ic_profile_error) // Opsional
+                            .apply(RequestOptions.circleCropTransform()) // Untuk membuat gambar lingkaran
+                            .into(binding.profileButton)
+                    } else {
+                        binding.profileButton.setImageResource(R.drawable.ic_profile)
+                        Log.w("ChatsFragment", "Profile image URL is null or empty for header button.")
+                    }
+                } else if (isAdded && _binding != null) {
+                    binding.profileButton.setImageResource(R.drawable.ic_profile)
+                    if (!snapshot.exists()){
+                        Log.w("ChatsFragment", "User data not found for profile image in header for UID: $userId")
+                    }
+                }
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                Log.e("ChatsFragment", "Failed to load profile image for header.", error.toException())
+                if (isAdded && _binding != null) {
+                    binding.profileButton.setImageResource(R.drawable.ic_profile)
+                }
+            }
+        })
+    }
+
+    // ... (sisa fungsi onBottomNavHeightCalculated, onResume, adjustViewsForBottomInsets, dll. tetap sama) ...
+    // Pastikan fungsi-fungsi berikut juga ada dan benar:
+    // onBottomNavHeightCalculated, onResume, adjustViewsForBottomInsets, applyStatusBarPaddingToHeader,
+    // setupRecyclerViewAdapter, setupRecyclerViewLayout, attachChatsListener, setupSearch,
+    // setupFloatingButtonClickListener, showNewChatDialog, onDetach, onDestroyView
 
     override fun onBottomNavHeightCalculated(height: Int) {
         if (!isAdded || _binding == null) return
         Log.d("ChatsFragment", "onBottomNavHeightCalculated called with height: $height")
 
-        if (height > 0) {
-            currentBottomNavHeight = height // Langsung update
+        if (height > 0) { // Hanya proses jika tinggi valid
+            currentBottomNavHeight = height // Selalu update dengan nilai terbaru dari Activity
 
             val systemGestureInsetsBottom = view?.let {
                 ViewCompat.getRootWindowInsets(it)?.getInsets(WindowInsetsCompat.Type.systemGestures())?.bottom ?: 0
@@ -129,6 +184,12 @@ class ChatsFragment : Fragment(), BottomNavHeightListener {
             val effectiveBottomNavHeight = currentBottomNavHeight + systemGestureInsetsBottom
             adjustViewsForBottomInsets(effectiveBottomNavHeight, currentImeHeight)
         }
+        // Jika Anda ingin memastikan gambar profil di header selalu yang terbaru saat onResume
+        // Anda bisa memanggil loadCurrentUserProfileImageToHeader() di sini juga,
+        // tapi pertimbangkan frekuensi pemanggilan jika data tidak sering berubah.
+        // if (currentUserId != null) {
+        //     loadCurrentUserProfileImageToHeader()
+        // }
     }
 
     private fun adjustViewsForBottomInsets(bottomNavHeightToUse: Int, imeHeightToUse: Int) {
@@ -145,7 +206,9 @@ class ChatsFragment : Fragment(), BottomNavHeightListener {
         }
     }
 
+
     private fun applyStatusBarPaddingToHeader() {
+        if (_binding == null) return // Tambahkan null check
         ViewCompat.setOnApplyWindowInsetsListener(binding.headerTitle) { headerView, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             headerView.updatePadding(top = systemBars.top)
@@ -157,12 +220,14 @@ class ChatsFragment : Fragment(), BottomNavHeightListener {
     }
 
     private fun setupRecyclerViewAdapter() {
+        // Inisialisasi adapter
         chatAdapter = ChatAdapter(currentUserId) { chat ->
             Log.d("ChatsFragment", "Chat clicked: ${chat.id}")
+            // Navigasi atau aksi lain saat chat diklik
         }
     }
-
     private fun setupRecyclerViewLayout() {
+        if (_binding == null) return // Tambahkan null check
         binding.chatRecyclerView.apply {
             layoutManager = LinearLayoutManager(requireContext())
             adapter = chatAdapter
@@ -170,13 +235,22 @@ class ChatsFragment : Fragment(), BottomNavHeightListener {
         }
     }
 
+
     private fun attachChatsListener() {
         if (currentUserId == null) return
+        // Pastikan Anda juga memiliki _binding yang valid sebelum mengakses chatAdapter
+        if (_binding == null || !::chatAdapter.isInitialized) {
+            Log.e("ChatsFragment", "Binding is null or chatAdapter not initialized in attachChatsListener")
+            return
+        }
+
         chatsReference = FirebaseDatabase.getInstance().getReference("chats")
         chatsValueEventListener?.let { chatsReference.removeEventListener(it) }
 
         chatsValueEventListener = object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
+                if (_binding == null || !::chatAdapter.isInitialized) return // Cek lagi di dalam callback
+
                 val newChats = mutableListOf<Chat>()
                 val totalChildren = snapshot.childrenCount
                 var processedChildren = 0
@@ -197,11 +271,14 @@ class ChatsFragment : Fragment(), BottomNavHeightListener {
                                     .addListenerForSingleValueEvent(object : ValueEventListener {
                                         override fun onDataChange(userSnapshot: DataSnapshot) {
                                             loadedChat.recipientName = userSnapshot.child("username").getValue(String::class.java) ?: "Unknown User"
-                                            loadedChat.recipientProfileImage = userSnapshot.child("profileImageUrl").getValue(String::class.java) ?: ""
+                                            // Asumsi Anda juga menyimpan URL gambar profil partisipan lain
+                                            loadedChat.recipientProfileImage = userSnapshot.child("profile").getValue(String::class.java) ?: ""
                                             synchronized(newChats) { newChats.add(loadedChat) }
                                             processedChildren++
                                             if (processedChildren == totalChildren.toInt()) {
-                                                chatAdapter.updateChats(newChats.sortedByDescending { c -> c.lastMessageTime })
+                                                if (isAdded && _binding != null && ::chatAdapter.isInitialized) { // Cek sebelum update adapter
+                                                    chatAdapter.updateChats(newChats.sortedByDescending { c -> c.lastMessageTime })
+                                                }
                                             }
                                         }
                                         override fun onCancelled(error: DatabaseError) {
@@ -210,7 +287,9 @@ class ChatsFragment : Fragment(), BottomNavHeightListener {
                                             synchronized(newChats) { newChats.add(loadedChat) }
                                             processedChildren++
                                             if (processedChildren == totalChildren.toInt()) {
-                                                chatAdapter.updateChats(newChats.sortedByDescending { c -> c.lastMessageTime })
+                                                if (isAdded && _binding != null && ::chatAdapter.isInitialized) {
+                                                    chatAdapter.updateChats(newChats.sortedByDescending { c -> c.lastMessageTime })
+                                                }
                                             }
                                         }
                                     })
@@ -219,57 +298,69 @@ class ChatsFragment : Fragment(), BottomNavHeightListener {
                                 synchronized(newChats) { newChats.add(loadedChat) }
                                 processedChildren++
                                 if (processedChildren == totalChildren.toInt()) {
-                                    chatAdapter.updateChats(newChats.sortedByDescending { c -> c.lastMessageTime })
+                                    if (isAdded && _binding != null && ::chatAdapter.isInitialized) {
+                                        chatAdapter.updateChats(newChats.sortedByDescending { c -> c.lastMessageTime })
+                                    }
                                 }
                             }
                         } ?: run {
                             processedChildren++
                             if (processedChildren == totalChildren.toInt()) {
-                                chatAdapter.updateChats(newChats.sortedByDescending { c -> c.lastMessageTime })
+                                if (isAdded && _binding != null && ::chatAdapter.isInitialized) {
+                                    chatAdapter.updateChats(newChats.sortedByDescending { c -> c.lastMessageTime })
+                                }
                             }
                         }
                     } catch (e: Exception) {
                         Log.e("ChatsFragment", "Error parsing chat data: ${data.key}", e)
                         processedChildren++
                         if (processedChildren == totalChildren.toInt()) {
-                            chatAdapter.updateChats(newChats.sortedByDescending { c -> c.lastMessageTime })
+                            if (isAdded && _binding != null && ::chatAdapter.isInitialized) {
+                                chatAdapter.updateChats(newChats.sortedByDescending { c -> c.lastMessageTime })
+                            }
                         }
                     }
                 }
             }
+
             override fun onCancelled(error: DatabaseError) {
                 Log.e("ChatsFragment", "Firebase chats listener cancelled.", error.toException())
             }
         }
-        val query = chatsReference.orderByChild("participants/$currentUserId").equalTo(true)
+
+        val query = chatsReference
+            .orderByChild("participants/$currentUserId")
+            .equalTo(true)
         query.addValueEventListener(chatsValueEventListener!!)
     }
 
     private fun setupSearch() {
+        if (_binding == null) return // Tambahkan null check
         binding.searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
-            override fun onQueryTextSubmit(query: String?): Boolean = false
+            override fun onQueryTextSubmit(query: String?): Boolean {
+                return false
+            }
+
             override fun onQueryTextChange(newText: String?): Boolean {
-                if (::chatAdapter.isInitialized) chatAdapter.filter.filter(newText)
+                if (::chatAdapter.isInitialized) {
+                    chatAdapter.filter.filter(newText)
+                }
                 return true
             }
         })
     }
 
-    // Dipanggil dari onViewCreated
     private fun setupFloatingButtonClickListener() {
+        if (_binding == null) return // Tambahkan null check
         binding.fabNewChat.setOnClickListener {
-            // TODO: Implementasi logika untuk "menambah teman"
-            // Misalnya, navigasi ke Fragment/Activity baru untuk mencari dan menambah teman
-            Log.d("ChatsFragment", "FAB New Chat (Add Friend) clicked")
-            // Contoh navigasi jika Anda menggunakan Navigation Component:
-            // findNavController().navigate(R.id.action_chatsFragment_to_findFriendsFragment)
+            showNewChatDialog()
         }
     }
 
-    // Hapus showNewChatDialog() jika tidak digunakan lagi, atau ganti namanya menjadi lebih sesuai
-    // private fun showNewChatDialog() {
-    //     Log.d("ChatsFragment", "FAB New Chat clicked")
-    // }
+    private fun showNewChatDialog() {
+        // TODO: Implement dialog
+        Log.d("ChatsFragment", "FAB New Chat clicked")
+    }
 
     override fun onDetach() {
         super.onDetach()
@@ -288,6 +379,7 @@ class ChatsFragment : Fragment(), BottomNavHeightListener {
         }
         chatsValueEventListener = null
         activityCallback?.clearBottomNavHeightListener(this)
-        _binding = null
+        _binding = null // Ini penting!
     }
+
 }

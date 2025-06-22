@@ -68,6 +68,6 @@ dependencies {
     implementation("com.google.firebase:firebase-appcheck-ktx:18.0.0")
 // Untuk debug selama development
     implementation("com.google.firebase:firebase-appcheck-debug:18.0.0")
-
+    annotationProcessor("com.github.bumptech.glide:compiler:4.16.0")
 
 }
