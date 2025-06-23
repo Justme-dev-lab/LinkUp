@@ -17,7 +17,6 @@ import com.example.linkup.model.Users // Impor data class Users Anda
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthUserCollisionException
 import com.google.firebase.auth.FirebaseAuthWeakPasswordException
-import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.FirebaseDatabase
 
 // Definisikan URL sebagai konstanta jika tidak menggunakan google-services.json secara default
@@ -159,11 +158,11 @@ class RegisterActivity : AppCompatActivity() {
                     // Tangani error registrasi yang lebih spesifik
                     try {
                         throw task.exception!!
-                    } catch (e: FirebaseAuthWeakPasswordException) {
+                    } catch (_: FirebaseAuthWeakPasswordException) {
                         etPassword.error = "Password terlalu lemah."
                         etPassword.requestFocus()
                         Toast.makeText(this, "Password terlalu lemah.", Toast.LENGTH_LONG).show()
-                    } catch (e: FirebaseAuthUserCollisionException) {
+                    } catch (_: FirebaseAuthUserCollisionException) {
                         etEmail.error = "Email sudah terdaftar."
                         etEmail.requestFocus()
                         Toast.makeText(this, "Email sudah terdaftar. Silakan login atau gunakan email lain.", Toast.LENGTH_LONG).show()
