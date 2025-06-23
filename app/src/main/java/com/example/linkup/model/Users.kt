@@ -1,54 +1,17 @@
 package com.example.linkup.model
 
-class Users
-{
-    private var uid: String = ""
-    private var username: String = ""
-    private var profile: String = ""
-    private var search: String = ""
+import com.google.firebase.database.IgnoreExtraProperties
 
-    constructor()
-    constructor(uid: String, profile: String, username: String, search: String) {
-        this.uid = uid
-        this.profile = profile
-        this.username = username
-        this.search = search
-    }
-    fun getUID(): String?{
-        return uid
-    }
-
-    fun setUID(uid: String){
-        this.uid = uid
-
-    }
-
-    fun getUsername(): String?{
-        return username
-    }
-
-    fun setUsername(username: String){
-        this.username = username
-
-    }
-
-    fun getProfile(): String?{
-        return profile
-    }
-
-    fun setProfile(profile: String){
-        this.profile = profile
-
-    }
-
-    fun getSearch(): String?{
-        return search
-    }
-
-    fun setSearch(search: String){
-        this.search = search
-
-    }
-
-
+@IgnoreExtraProperties // Berguna jika ada field di Firebase yang tidak ada di model Anda
+data class Users(
+    var uid: String = "", // Properti 'uid' sekarang publik dan bisa diubah (var)
+    var username: String = "",
+    var profile: String = "",
+    var search: String = ""
+    // Anda bisa menambahkan field lain di sini jika perlu, misalnya:
+    // var email: String = ""
+) {
+    // Konstruktor tanpa argumen secara otomatis dibuat oleh Kotlin
+    // karena semua properti di konstruktor utama memiliki nilai default.
+    // Firebase memerlukan konstruktor ini untuk deserialisasi data.
 }

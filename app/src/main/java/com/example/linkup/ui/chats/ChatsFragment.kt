@@ -17,6 +17,7 @@ import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.bumptech.glide.Glide
 import com.bumptech.glide.request.RequestOptions
+import com.example.linkup.AddFriendActivity
 import com.example.linkup.ProfileActivity
 import com.example.linkup.R
 import com.example.linkup.databinding.FragmentChatsBinding
@@ -351,16 +352,19 @@ class ChatsFragment : Fragment(), BottomNavHeightListener {
     }
 
     private fun setupFloatingButtonClickListener() {
-        if (_binding == null) return // Tambahkan null check
+        if (_binding == null) return
         binding.fabNewChat.setOnClickListener {
-            showNewChatDialog()
+            // Hapus showNewChatDialog() atau implementasi lain jika ada
+            // Log.d("ChatsFragment", "FAB New Chat clicked, starting AddFriendActivity")
+            val intent = Intent(requireContext(), AddFriendActivity::class.java)
+            startActivity(intent)
         }
     }
 
-    private fun showNewChatDialog() {
-        // TODO: Implement dialog
-        Log.d("ChatsFragment", "FAB New Chat clicked")
-    }
+//    private fun showNewChatDialog() {
+//        // TODO: Implement dialog
+//        Log.d("ChatsFragment", "FAB New Chat clicked")
+//    }
 
     override fun onDetach() {
         super.onDetach()

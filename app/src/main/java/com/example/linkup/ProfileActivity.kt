@@ -1,7 +1,7 @@
 package com.example.linkup
 
 import android.content.Intent
-import android.graphics.drawable.Drawable // Import Drawable untuk RequestListener
+import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.util.Log
 import android.widget.Button
@@ -12,10 +12,11 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.bumptech.glide.Glide
-import com.bumptech.glide.load.DataSource // Import DataSource
-import com.bumptech.glide.load.engine.GlideException // Import GlideException
-import com.bumptech.glide.request.RequestListener // Import RequestListener
-import com.bumptech.glide.request.target.Target // Import Target
+import com.bumptech.glide.load.DataSource
+import com.bumptech.glide.load.engine.GlideException
+import com.bumptech.glide.request.RequestListener
+import com.bumptech.glide.request.target.Target
+import com.example.linkup.model.Users // <-- Tambahkan import untuk data class Users Anda
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.database.DataSnapshot
@@ -30,7 +31,6 @@ class ProfileActivity : AppCompatActivity() {
     private lateinit var profileImageView: ImageView
     private lateinit var nameTextView: TextView
 
-    // Konstanta untuk Tag Log
     private companion object {
         private const val TAG = "ProfileActivity"
     }
@@ -45,18 +45,15 @@ class ProfileActivity : AppCompatActivity() {
         currentUser = auth.currentUser
         Log.d(TAG, "onCreate: Current User UID: ${currentUser?.uid ?: "User is NULL"}")
 
-        // Inisialisasi Views
         try {
             profileImageView = findViewById(R.id.profileImage)
-            nameTextView = findViewById(R.id.namaTextView) // Pastikan ID ini benar di XML Anda
+            nameTextView = findViewById(R.id.namaTextView)
             Log.d(TAG, "onCreate: Views initialized successfully.")
         } catch (e: Exception) {
             Log.e(TAG, "onCreate: Error initializing views. Check your XML IDs (profileImage, namaTextView).", e)
-            // Anda mungkin ingin menampilkan pesan error atau menutup activity jika view penting tidak ditemukan
-            finish() // Contoh: Tutup activity jika view utama tidak ada
+            finish()
             return
         }
-
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
@@ -77,14 +74,13 @@ class ProfileActivity : AppCompatActivity() {
             val intent = Intent(this@ProfileActivity, LoginActivity::class.java)
             intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
             startActivity(intent)
-            finishAffinity() // Gunakan finishAffinity() untuk membersihkan semua activity di atas LoginActivity
+            finishAffinity()
         }
 
         if (currentUser != null) {
             loadUserProfile()
         } else {
             Log.e(TAG, "onCreate: Current user is null. Cannot load profile. Redirecting to Login.")
-            // Arahkan ke LoginActivity jika pengguna tidak login
             val intent = Intent(this@ProfileActivity, LoginActivity::class.java)
             intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
             startActivity(intent)
@@ -98,72 +94,84 @@ class ProfileActivity : AppCompatActivity() {
 
         if (userId == null) {
             Log.e(TAG, "loadUserProfile: userId is null, cannot proceed.")
-            // Mungkin tampilkan pesan error default atau kembali
             if (::nameTextView.isInitialized) {
                 nameTextView.text = "Error: Pengguna tidak valid"
             }
             if (::profileImageView.isInitialized) {
-                profileImageView.setImageResource(R.drawable.ic_profile_error) // Atau placeholder default
+                profileImageView.setImageResource(R.drawable.ic_profile_error)
             }
             return
         }
 
-        val userRef = FirebaseDatabase.getInstance().getReference("users").child(userId)
+        // Gunakan URL database dari konstanta jika ada, atau biarkan default jika google-services.json benar
+        val userRef = FirebaseDatabase.getInstance("https://linkup-3b210-default-rtdb.asia-southeast1.firebasedatabase.app")
+            .getReference("users").child(userId)
         Log.d(TAG, "loadUserProfile: Attempting to read from Firebase path: ${userRef.toString()}")
 
         userRef.addListenerForSingleValueEvent(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 Log.d(TAG, "Firebase onDataChange: Snapshot exists: ${snapshot.exists()}")
                 if (snapshot.exists()) {
-                    Log.d(TAG, "Firebase onDataChange: Snapshot data: ${snapshot.value}") // LOG SEMUA DATA SNAPSHOT
+                    // Deserialisasi DataSnapshot ke objek Users
+                    val user = snapshot.getValue(Users::class.java)
+                    Log.d(TAG, "Firebase onDataChange: Deserialized User object: $user")
 
-                    val username = snapshot.child("username").getValue(String::class.java)
-                    val profileImageUrl = snapshot.child("profile").getValue(String::class.java) // Kunci "profile"
+                    if (user != null) {
+                        if (::nameTextView.isInitialized) {
+                            nameTextView.text = user.username.ifEmpty { "Nama Tidak Tersedia" }
+                        } else {
+                            Log.w(TAG, "Firebase onDataChange: nameTextView is not initialized when trying to set username.")
+                        }
 
-                    Log.d(TAG, "Firebase onDataChange: Extracted Username: $username")
-                    Log.d(TAG, "Firebase onDataChange: Extracted Profile Image URL: $profileImageUrl")
+                        if (user.profile.isNotEmpty()) {
+                            Log.d(TAG, "Glide: Attempting to load image URL: ${user.profile}")
+                            if (::profileImageView.isInitialized) { // Pastikan ImageView diinisialisasi sebelum digunakan Glide
+                                Glide.with(this@ProfileActivity)
+                                    .load(user.profile)
+                                    .placeholder(R.drawable.ic_profile)
+                                    .error(R.drawable.ic_profile_error)
+                                    .circleCrop()
+                                    .listener(object : RequestListener<Drawable> {
+                                        override fun onLoadFailed(
+                                            e: GlideException?,
+                                            model: Any?,
+                                            target: Target<Drawable?>,
+                                            isFirstResource: Boolean
+                                        ): Boolean {
+                                            Log.e(TAG, "Glide onLoadFailed for URL: $model", e)
+                                            // Set gambar error jika Glide gagal, meskipun sudah ada .error()
+                                            profileImageView.setImageResource(R.drawable.ic_profile_error)
+                                            return false // Mengembalikan false agar error() tetap diproses jika perlu
+                                        }
 
-                    if (::nameTextView.isInitialized) {
-                        nameTextView.text = username ?: "Nama Tidak Tersedia"
+                                        override fun onResourceReady(
+                                            resource: Drawable,
+                                            model: Any,
+                                            target: Target<Drawable?>?,
+                                            dataSource: DataSource,
+                                            isFirstResource: Boolean
+                                        ): Boolean {
+                                            Log.d(TAG, "Glide onResourceReady for URL: $model. DataSource: $dataSource")
+                                            return false
+                                        }
+                                    })
+                                    .into(profileImageView)
+                            } else {
+                                Log.w(TAG, "Glide: profileImageView is not initialized when trying to load image.")
+                            }
+                        } else {
+                            Log.w(TAG, "Glide: Profile image URL from User object is empty. Setting placeholder.")
+                            if (::profileImageView.isInitialized) {
+                                profileImageView.setImageResource(R.drawable.ic_profile)
+                            }
+                        }
                     } else {
-                        Log.w(TAG, "Firebase onDataChange: nameTextView is not initialized when trying to set username.")
-                    }
-
-                    if (!profileImageUrl.isNullOrEmpty()) {
-                        Log.d(TAG, "Glide: Attempting to load image URL: $profileImageUrl")
-                        Glide.with(this@ProfileActivity)
-                            .load(profileImageUrl)
-                            .placeholder(R.drawable.ic_profile) // Pastikan drawable ini ada
-                            .error(R.drawable.ic_profile_error) // Pastikan drawable ini ada
-                            .circleCrop()
-                            .listener(object : RequestListener<Drawable> {
-                                override fun onLoadFailed(
-                                    e: GlideException?,
-                                    model: Any?,
-                                    target: Target<Drawable?>,
-                                    isFirstResource: Boolean
-                                ): Boolean {
-                                    Log.e(TAG, "Glide onLoadFailed for URL: $model", e)
-                                    return false
-                                }
-
-                                override fun onResourceReady(
-                                    resource: Drawable,
-                                    model: Any,
-                                    target: Target<Drawable?>?,
-                                    dataSource: DataSource,
-                                    isFirstResource: Boolean
-                                ): Boolean {
-                                    Log.d(TAG, "Glide onResourceReady for URL: $model. DataSource: $dataSource")
-                                    return false
-                                }
-
-                            })
-                            .into(profileImageView)
-                    } else {
-                        Log.w(TAG, "Glide: Profile image URL from DB is null or empty. Setting placeholder.")
+                        Log.w(TAG, "Firebase onDataChange: Failed to deserialize snapshot to User object for UID: $userId")
+                        if (::nameTextView.isInitialized) {
+                            nameTextView.text = "Data Pengguna Tidak Valid"
+                        }
                         if (::profileImageView.isInitialized) {
-                            profileImageView.setImageResource(R.drawable.ic_profile)
+                            profileImageView.setImageResource(R.drawable.ic_profile_error)
                         }
                     }
                 } else {
@@ -172,7 +180,7 @@ class ProfileActivity : AppCompatActivity() {
                         nameTextView.text = "Data Pengguna Tidak Ditemukan"
                     }
                     if (::profileImageView.isInitialized) {
-                        profileImageView.setImageResource(R.drawable.ic_profile) // Atau gambar error khusus
+                        profileImageView.setImageResource(R.drawable.ic_profile)
                     }
                 }
             }
@@ -192,14 +200,16 @@ class ProfileActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         Log.d(TAG, "onDestroy: Activity destroyed.")
-        // Anda tidak menggunakan ValueEventListener yang berkelanjutan, jadi tidak perlu remove listener di sini.
-        // Namun, baik untuk membatalkan permintaan Glide jika activity dihancurkan
-        if (::profileImageView.isInitialized) { // Cek jika sudah diinisialisasi
+        if (::profileImageView.isInitialized) {
             try {
-                if (isDestroyed || isFinishing) { // Pastikan activity benar-benar dihancurkan
-                    Glide.with(applicationContext).clear(profileImageView) // Atau this@ProfileActivity jika masih valid
-                    Log.d(TAG, "onDestroy: Cleared Glide request for profileImageView.")
+                // Pastikan untuk clear Glide hanya jika activity benar-benar dihancurkan
+                // dan context masih valid. Menggunakan applicationContext lebih aman di onDestroy.
+                if (!isFinishing && !isChangingConfigurations) {
+                    // Jangan clear jika hanya reorientasi
+                    return
                 }
+                Glide.with(applicationContext).clear(profileImageView)
+                Log.d(TAG, "onDestroy: Cleared Glide request for profileImageView.")
             } catch (e: Exception) {
                 Log.e(TAG, "onDestroy: Error clearing Glide request.", e)
             }
