@@ -22,6 +22,7 @@ import com.example.linkup.ProfileActivity
 import com.example.linkup.R
 import com.example.linkup.databinding.FragmentChatsBinding
 import com.example.linkup.model.Chat
+import com.example.linkup.ui.BottomNavHeightListener
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.database.DataSnapshot

@@ -3,4 +3,24 @@
     <string name="title_chats">Chats</string>
     <string name="title_soundboards">Soundboards</string>
     <string name="title_settings">Settings</string>
+    <!-- ... string lain ... -->
+    <string name="sound_title_hint">Sound Title</string>
+    <string name="sound_url_hint">Sound URL (mis: https://…)</string>
+    <string name="icon_name_hint">Icon Name (opsional, default: ic_soundboards)</string>
+    <string name="background_color_hint">Background Color (opsional, default: #D3D3D3)</string>
+    <string name="add_new_sound_dialog_title">Add New Sound</string>
+    <string name="add_button">Add</string>
+    <string name="cancel_button">Cancel</string>
+    <string name="invalid_sound_url">Invalid Sound URL format.</string>
+    <string name="invalid_background_color">Invalid Background Color format (e.g., #RRGGBB).
+    </string>
+    <string name="title_url_empty_error">Title and Sound URL cannot be empty.</string>
+    <string name="sound_added_success">\'%1$s\' added successfully.</string>
+    <string name="failed_to_add_sound">Failed to add sound: %1$s</string>
+    <string name="failed_generate_id">Failed to generate ID for new sound.</string>
+    <string name="cannot_add_sound_user_null">Cannot add sound: User not logged in or database
+        reference is null.
+    </string>
+        <!-- other strings -->
+    <string name="user_not_logged_in">User not logged in.</string>
 </resources>

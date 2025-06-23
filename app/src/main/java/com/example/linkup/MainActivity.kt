@@ -10,7 +10,7 @@ import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.setupWithNavController
 import com.example.linkup.databinding.ActivityMainBinding
-import com.example.linkup.ui.chats.BottomNavHeightListener
+import com.example.linkup.ui.BottomNavHeightListener
 import com.example.linkup.ui.chats.ChatsFragment // Import ChatsFragment untuk ActivityCallback
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.firebase.auth.FirebaseAuth

@@ -12,11 +12,11 @@
 
     <fragment
         android:id="@+id/navigation_soundboards"
-        android:name="com.example.linkup.ui.soundboards.DashboardFragment"
-        tools:layout="@layout/fragment_dashboard" />
+        android:name="com.example.linkup.ui.soundboards.SoundboardsFragment"
+        tools:layout="@layout/fragment_soundboards" />
 
     <fragment
         android:id="@+id/navigation_settings"
-        android:name="com.example.linkup.ui.settings.NotificationsFragment"
-        tools:layout="@layout/fragment_notifications" />
+        android:name="com.example.linkup.ui.settings.SettingsFragment"
+        tools:layout="@layout/fragment_settings" />
 </navigation>
