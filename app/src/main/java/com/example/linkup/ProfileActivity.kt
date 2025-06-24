@@ -9,6 +9,10 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
+
+import android.widget.EditText
+import android.widget.Toast
+
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.bumptech.glide.Glide
@@ -26,10 +30,15 @@ import com.google.firebase.database.ValueEventListener
 
 class ProfileActivity : AppCompatActivity() {
 
+
+    private var isEditingAbout = false
+    private var isEditingPhone = false
+
     private lateinit var auth: FirebaseAuth
     private var currentUser: FirebaseUser? = null
     private lateinit var profileImageView: ImageView
     private lateinit var nameTextView: TextView
+    private lateinit var emailTextView: TextView
 
     private companion object {
         private const val TAG = "ProfileActivity"
@@ -44,10 +53,12 @@ class ProfileActivity : AppCompatActivity() {
         auth = FirebaseAuth.getInstance()
         currentUser = auth.currentUser
         Log.d(TAG, "onCreate: Current User UID: ${currentUser?.uid ?: "User is NULL"}")
+        Log.d(TAG, "onCreate: Current User Email: ${currentUser?.email ?: "Email not available"}")
 
         try {
             profileImageView = findViewById(R.id.profileImage)
             nameTextView = findViewById(R.id.namaTextView)
+            emailTextView = findViewById(R.id.emailValueTextView)
             Log.d(TAG, "onCreate: Views initialized successfully.")
         } catch (e: Exception) {
             Log.e(TAG, "onCreate: Error initializing views. Check your XML IDs (profileImage, namaTextView).", e)
@@ -67,6 +78,12 @@ class ProfileActivity : AppCompatActivity() {
             finish()
         }
 
+        val editProfileButton: Button = findViewById(R.id.editprofilebtn)
+        editProfileButton.setOnClickListener {
+            val intent = Intent(this, EditProfileActivity::class.java)
+            startActivity(intent)
+
+        }
         val logoutButton: Button = findViewById(R.id.logoutbtn)
         logoutButton.setOnClickListener {
             Log.d(TAG, "Logout button clicked.")
@@ -78,7 +95,14 @@ class ProfileActivity : AppCompatActivity() {
         }
 
         if (currentUser != null) {
+            // Langsung set email di sini karena sudah tersedia dari currentUser
+            if (::emailTextView.isInitialized) {
+                emailTextView.text = currentUser?.email ?: "Email Tidak Tersedia"
+            } else {
+                Log.w(TAG, "onCreate: emailValueTextView is not initialized when trying to set email.")
+            }
             loadUserProfile()
+        // Lanjutkan memuat data lain dari database jika perlu
         } else {
             Log.e(TAG, "onCreate: Current user is null. Cannot load profile. Redirecting to Login.")
             val intent = Intent(this@ProfileActivity, LoginActivity::class.java)
@@ -87,12 +111,17 @@ class ProfileActivity : AppCompatActivity() {
             finish()
         }
     }
-
+    override fun onResume() {
+        super.onResume()
+        Log.d(TAG, "onResume: Refreshing user profile...")
+        loadUserProfile()
+    }
     private fun loadUserProfile() {
         val userId = currentUser?.uid
         Log.d(TAG, "loadUserProfile: Called for userID: $userId")
 
-        if (userId == null) {
+        if (userId == null)
+        {
             Log.e(TAG, "loadUserProfile: userId is null, cannot proceed.")
             if (::nameTextView.isInitialized) {
                 nameTextView.text = "Error: Pengguna tidak valid"
@@ -117,9 +146,18 @@ class ProfileActivity : AppCompatActivity() {
                     Log.d(TAG, "Firebase onDataChange: Deserialized User object: $user")
 
                     if (user != null) {
+
+                        val aboutText: TextView = findViewById(R.id.aboutValueText)
+                        val phoneText: TextView = findViewById(R.id.phoneValueText)
+
+                        aboutText.text = user.about.ifEmpty { "Belum diisi" }
+                        phoneText.text = user.phone.ifEmpty { "Belum diisi" }
+
                         if (::nameTextView.isInitialized) {
                             nameTextView.text = user.username.ifEmpty { "Nama Tidak Tersedia" }
-                        } else {
+                        }
+
+                        else {
                             Log.w(TAG, "Firebase onDataChange: nameTextView is not initialized when trying to set username.")
                         }
 
@@ -215,4 +253,5 @@ class ProfileActivity : AppCompatActivity() {
             }
         }
     }
+
 }
