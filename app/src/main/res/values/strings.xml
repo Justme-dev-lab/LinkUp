@@ -21,6 +21,6 @@
     <string name="cannot_add_sound_user_null">Cannot add sound: User not logged in or database
         reference is null.
     </string>
-        <!-- other strings -->
+    <!-- other strings -->
     <string name="user_not_logged_in">User not logged in.</string>
 </resources>

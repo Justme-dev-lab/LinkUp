@@ -22,7 +22,7 @@
 
             <Button
                 android:id="@+id/profback"
-                android:layout_width="29dp"
+                android:layout_width="32dp"
                 android:layout_height="match_parent"
                 android:background="@drawable/ic_back"
                 android:contentDescription="backbtn"
@@ -35,7 +35,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="16dp"
                 android:text="Profile"
-                android:textSize="20sp"
+                android:textSize="28sp"
                 android:textStyle="bold" />
         </LinearLayout>
 

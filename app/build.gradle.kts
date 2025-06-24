@@ -71,5 +71,6 @@ dependencies {
 // Untuk debug selama development
     implementation("com.google.firebase:firebase-appcheck-debug:18.0.0")
     annotationProcessor("com.github.bumptech.glide:compiler:4.16.0")
-
+    implementation("com.github.bumptech.glide:glide:4.16.0") // Versi terbaru
+    implementation("de.hdodenhof:circleimageview:3.1.0") // Versi terbaru
 }
