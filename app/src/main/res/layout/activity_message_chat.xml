@@ -90,13 +90,13 @@
 
         <ImageView
             android:id="@+id/send_message_btn"
-            android:layout_width="50dp"
-            android:layout_height="50dp"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
             android:layout_alignParentEnd="true"
             android:layout_alignParentRight="true"
             android:layout_marginStart="8dp"
             android:layout_marginRight="8dp"
-            android:background="@drawable/ic_attach_file">
+            android:background="@drawable/ic_send">
 
         </ImageView>
 
