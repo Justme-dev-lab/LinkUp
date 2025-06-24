@@ -71,6 +71,8 @@ class ChatsFragment : Fragment(), BottomNavHeightListener {
         return binding.root
     }
 
+
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -185,12 +187,11 @@ class ChatsFragment : Fragment(), BottomNavHeightListener {
             val effectiveBottomNavHeight = currentBottomNavHeight + systemGestureInsetsBottom
             adjustViewsForBottomInsets(effectiveBottomNavHeight, currentImeHeight)
         }
-        // Jika Anda ingin memastikan gambar profil di header selalu yang terbaru saat onResume
-        // Anda bisa memanggil loadCurrentUserProfileImageToHeader() di sini juga,
-        // tapi pertimbangkan frekuensi pemanggilan jika data tidak sering berubah.
-        // if (currentUserId != null) {
-        //     loadCurrentUserProfileImageToHeader()
-        // }
+
+        // ✅ Tambahkan ini untuk memuat ulang foto profil setiap kali kembali ke fragment
+        if (currentUserId != null && isAdded && _binding != null) {
+            loadCurrentUserProfileImageToHeader()
+        }
     }
 
     private fun adjustViewsForBottomInsets(bottomNavHeightToUse: Int, imeHeightToUse: Int) {
@@ -223,9 +224,9 @@ class ChatsFragment : Fragment(), BottomNavHeightListener {
     private fun setupRecyclerViewAdapter() {
         // Inisialisasi adapter
         chatAdapter = ChatAdapter(currentUserId) { chat ->
-            Log.d("ChatsFragment", "Chat clicked: ${chat.id}")
-            // Navigasi atau aksi lain saat chat diklik
+
         }
+
     }
     private fun setupRecyclerViewLayout() {
         if (_binding == null) return // Tambahkan null check
