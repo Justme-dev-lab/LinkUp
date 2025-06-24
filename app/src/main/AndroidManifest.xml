@@ -23,6 +23,12 @@
         android:theme="@style/Theme.LinkUp"
         tools:targetApi="31">
         <activity
+            android:name=".MessageChatActivity"
+            android:exported="false" />
+        <activity
+            android:name=".EditProfileActivity"
+            android:exported="false" />
+        <activity
             android:name=".InfoAplikasiActivity"
             android:exported="false" />
         <activity
