@@ -13,7 +13,6 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.isVisible
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.linkup.model.Chat
@@ -199,21 +198,20 @@ class AddFriendActivity : AppCompatActivity() {
 
         // Buat ID chat yang unik dan konsisten (contoh sederhana)
         val chatRoomId = if (currentUserId!! < selectedUserId) {
-            "${currentUserId}_${selectedUserId}"
+            "${currentUserId}-${selectedUserId}" // GANTI KE TANDA HUBUNG
         } else {
-            "${selectedUserId}_${currentUserId}"
+            "${selectedUserId}-${currentUserId}" // GANTI KE TANDA HUBUNG
         }
 
         val newChat = Chat(
-            id = chatRoomId,
+            id = chatRoomId, // Anda juga bisa langsung menggunakan chatRoomId sebagai id di sini
             participants = chatParticipants,
             lastMessage = "Ayo mulai mengobrol!", // Pesan awal
             lastMessageTime = System.currentTimeMillis(),
-            lastMessageSenderId = currentUserId, // atau null jika belum ada pesan
+            lastMessageSenderId = currentUserId,
             createdBy = currentUserId,
             createdAt = System.currentTimeMillis(),
             isGroupChat = false,
-            // recipientName dan recipientProfileImage akan di-load oleh ChatAdapter/ChatsFragment
         )
 
         chatsRef.child(chatRoomId).setValue(newChat)
