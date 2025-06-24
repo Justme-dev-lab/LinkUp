@@ -8,6 +8,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.SearchView
+import android.widget.Toast
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -18,6 +19,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.bumptech.glide.Glide
 import com.bumptech.glide.request.RequestOptions
 import com.example.linkup.AddFriendActivity
+import com.example.linkup.MessageChatActivity
 import com.example.linkup.ProfileActivity
 import com.example.linkup.R
 import com.example.linkup.databinding.FragmentChatsBinding
@@ -222,13 +224,39 @@ class ChatsFragment : Fragment(), BottomNavHeightListener {
         }
     }
 
+//    private fun setupRecyclerViewAdapter() {
+//        // Inisialisasi adapter
+//        chatAdapter = ChatAdapter(currentUserId) { chat ->
+//
+//        }
+//
+//    }
+
+    // Di ChatsFragment
     private fun setupRecyclerViewAdapter() {
-        // Inisialisasi adapter
-        chatAdapter = ChatAdapter(currentUserId) { chat ->
+        chatAdapter = ChatAdapter(currentUserId) { chat -> // 'chat' adalah objek dari adapter
+            val otherParticipantId = chat.participants.keys.firstOrNull { it != currentUserId }
 
+            if (otherParticipantId != null || chat.isGroupChat) {
+                val intent = Intent(requireContext(), MessageChatActivity::class.java)
+                if (chat.isGroupChat) {
+                    intent.putExtra(MessageChatActivity.EXTRA_USER_ID, chat.id)
+                    intent.putExtra(MessageChatActivity.EXTRA_USER_NAME, chat.groupName ?: "Group Chat")
+                    intent.putExtra(MessageChatActivity.EXTRA_PROFILE_IMAGE_URL, chat.groupImage ?: "")
+                } else if (otherParticipantId != null) {
+                    // Menggunakan properti yang sudah di-populate dari model 'Chat'
+                    intent.putExtra(MessageChatActivity.EXTRA_USER_ID, otherParticipantId)
+                    intent.putExtra(MessageChatActivity.EXTRA_USER_NAME, chat.recipientName) // SUDAH ADA DARI MODEL
+                    intent.putExtra(MessageChatActivity.EXTRA_PROFILE_IMAGE_URL, chat.recipientProfileImage) // SUDAH ADA DARI MODEL
+                }
+                startActivity(intent)
+            } else {
+                Log.w("ChatsFragment", "Could not determine recipient for chat: ${chat.id}")
+                Toast.makeText(requireContext(), "Cannot open chat.", Toast.LENGTH_SHORT).show()
+            }
         }
-
     }
+
     private fun setupRecyclerViewLayout() {
         if (_binding == null) return // Tambahkan null check
         binding.chatRecyclerView.apply {

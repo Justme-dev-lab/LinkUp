@@ -21,9 +21,10 @@
         app:layout_constraintTop_toTopOf="parent">
 
         <de.hdodenhof.circleimageview.CircleImageView
+            android:id="@+id/profile_image_mchat"
             android:layout_width="60dp"
             android:layout_height="60dp"
-            android:background="@drawable/profile"
+            android:src="@drawable/profile"
             android:visibility="visible"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
