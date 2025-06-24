@@ -7,7 +7,9 @@ data class Users(
     var uid: String = "", // Properti 'uid' sekarang publik dan bisa diubah (var)
     var username: String = "",
     var profile: String = "",
-    var search: String = ""
+    var search: String = "",
+    var about: String = "",
+    var phone: String = ""
     // Anda bisa menambahkan field lain di sini jika perlu, misalnya:
     // var email: String = ""
 ) {
