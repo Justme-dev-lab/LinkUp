@@ -47,7 +47,7 @@
             android:layout_gravity="center_horizontal"
             android:layout_marginTop="32dp"
             android:background="@drawable/circle_background"
-            android:scaleType="fitCenter"
+            android:scaleType="centerCrop"
             android:src="@drawable/ic_profile" />
 
         <!-- Nama & Edit -->

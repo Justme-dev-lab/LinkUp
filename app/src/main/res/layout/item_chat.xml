@@ -2,18 +2,20 @@
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:padding="16dp">
 
-    <ImageView
+    <de.hdodenhof.circleimageview.CircleImageView
         android:id="@+id/profileImage"
         android:layout_width="56dp"
         android:layout_height="56dp"
+        android:src="@drawable/ic_profile"
+        android:scaleType="centerCrop"
         android:contentDescription="Profile image"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        android:src="@drawable/ic_profile"/>
+        app:layout_constraintTop_toTopOf="parent" />
 
     <TextView
         android:id="@+id/nameTextView"
@@ -21,44 +23,63 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
         android:layout_marginEnd="16dp"
-        android:textColor="@android:color/black"
         android:textSize="16sp"
         android:textStyle="bold"
-        app:layout_constraintEnd_toStartOf="@id/timeTextView"
+        android:textColor="@android:color/black"
+        tools:text="Nama Pengguna"
         app:layout_constraintStart_toEndOf="@id/profileImage"
-        app:layout_constraintTop_toTopOf="@id/profileImage"/>
+        app:layout_constraintTop_toTopOf="@id/profileImage"
+        app:layout_constraintEnd_toStartOf="@id/timeTextView" />
 
-    <TextView
-        android:id="@+id/lastMessageTextView"
+    <!-- LinearLayout untuk lastMessage dan statusIndicator -->
+    <LinearLayout
+        android:id="@+id/lastMessageContainer"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
+        android:orientation="horizontal"
         android:layout_marginStart="16dp"
         android:layout_marginEnd="16dp"
-        android:maxLines="1"
-        android:ellipsize="end"
-        android:textColor="@android:color/darker_gray"
-        android:textSize="14sp"
-        app:layout_constraintEnd_toStartOf="@id/statusIndicator"
+        android:layout_marginTop="4dp"
         app:layout_constraintStart_toEndOf="@id/profileImage"
-        app:layout_constraintTop_toBottomOf="@id/nameTextView"/>
+        app:layout_constraintTop_toBottomOf="@id/nameTextView"
+        app:layout_constraintEnd_toEndOf="parent">
+        <!-- Berakhir di ujung parent agar bisa mengambil sisa ruang -->
 
-    <ImageView
-        android:id="@+id/statusIndicator"
-        android:layout_width="16dp"
-        android:layout_height="16dp"
-        android:layout_marginStart="4dp"
-        android:visibility="gone"
-        app:layout_constraintBottom_toBottomOf="@id/lastMessageTextView"
-        app:layout_constraintStart_toEndOf="@id/lastMessageTextView"/>
+        <TextView
+            android:id="@+id/lastMessageTextView"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Last Message"
+            tools:text="Ini adalah contoh pesan terakhir yang mungkin cukup panjang untuk dilihat bagaimana perilakunya."
+            android:textSize="14sp"
+            android:textColor="@android:color/darker_gray"
+            android:maxLines="1"
+            android:ellipsize="end" />
+        <!-- Tidak perlu marginEnd di sini karena diatur oleh LinearLayout dan statusIndicator -->
+
+        <ImageView
+            android:id="@+id/statusIndicator"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:layout_marginStart="4dp"
+            android:layout_gravity="center_vertical"
+            android:visibility="gone"
+            tools:src="@drawable/ic_read"
+            tools:visibility="visible" />
+        <!-- Constraint tidak lagi diperlukan karena diatur oleh LinearLayout -->
+    </LinearLayout>
 
     <TextView
         android:id="@+id/timeTextView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textColor="@android:color/darker_gray"
         android:textSize="12sp"
+        android:textColor="@android:color/darker_gray"
+        tools:text="10:00 AM"
+        app:layout_constraintTop_toTopOf="@id/nameTextView"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="@id/nameTextView"/>
+        app:layout_constraintBottom_toBottomOf="@id/nameTextView" />
+    <!-- Menambahkan constraintBottom agar lebih stabil secara vertikal dengan nameTextView -->
 
 </androidx.constraintlayout.widget.ConstraintLayout>

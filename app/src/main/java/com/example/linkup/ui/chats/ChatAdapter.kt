@@ -8,30 +8,27 @@ import android.widget.Filterable
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.DiffUtil
-import androidx.recyclerview.widget.ListAdapter // Ganti ke ListAdapter untuk DiffUtil
+import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.example.linkup.R
 import com.example.linkup.model.Chat
-import com.example.linkup.utils.DateUtils.formatTimestamp // Pastikan util ini ada dan benar
+import com.example.linkup.utils.DateUtils.formatTimestamp
 import java.util.Locale
 
-// Gunakan ListAdapter untuk efisiensi dengan DiffUtil
 class ChatAdapter(
-    private val currentUserId: String?, // Teruskan currentUserId
+    private val currentUserId: String?,
     private val onItemClick: (Chat) -> Unit
 ) : ListAdapter<Chat, ChatAdapter.ChatViewHolder>(ChatDiffCallback()), Filterable {
 
-    // List asli untuk filtering, akan diupdate dari luar
     private var originalList: List<Chat> = emptyList()
 
     fun updateChats(newChats: List<Chat>) {
         originalList = newChats
-        submitList(newChats) // ListAdapter menggunakan submitList
+        submitList(newChats)
     }
 
     inner class ChatViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        // Asumsi ID ini ada di item_chat.xml
         private val profileImage: ImageView = itemView.findViewById(R.id.profileImage)
         private val nameTextView: TextView = itemView.findViewById(R.id.nameTextView)
         private val lastMessageTextView: TextView = itemView.findViewById(R.id.lastMessageTextView)
@@ -39,12 +36,9 @@ class ChatAdapter(
         private val statusIndicator: ImageView = itemView.findViewById(R.id.statusIndicator)
 
         fun bind(chat: Chat) {
-            // Logika utama binding ada di onBindViewHolder sekarang,
-            // itemView.setOnClickListener bisa langsung di onBindViewHolder atau di sini jika lebih rapi
             itemView.setOnClickListener { onItemClick(chat) }
 
-            // Menggunakan properti dari model Chat yang sudah diisi di Fragment
-            nameTextView.text = chat.recipientName ?: "Loading..." // Beri default jika belum ada
+            nameTextView.text = chat.recipientName ?: "Loading..."
             timeTextView.text = if (chat.lastMessageTime > 0) formatTimestamp(chat.lastMessageTime) else ""
 
             if (chat.lastMessage.isNullOrEmpty()) {
@@ -55,27 +49,26 @@ class ChatAdapter(
 
             Glide.with(itemView.context)
                 .load(chat.recipientProfileImage)
-                .placeholder(R.drawable.ic_profile) // Placeholder default
-                .error(R.drawable.ic_profile) // Gambar jika error load
+                .placeholder(R.drawable.ic_profile)
+                .error(R.drawable.ic_profile)
                 .into(profileImage)
 
+            // Logika untuk menampilkan status pesan
             if (chat.lastMessageSenderId == currentUserId && !chat.lastMessage.isNullOrEmpty()) {
-                val statusRes = when (chat.readBy?.containsKey(currentUserId) == true && chat.readBy?.get(currentUserId) == true) { // Contoh logika status read yang lebih baik
-                    true -> R.drawable.ic_read // Jika currentUser sudah membacanya (ini mungkin salah logika untuk status TERKIRIM)
-                    // Anda perlu logika status yang benar:
-                    // Jika lastMessageSenderId == currentUserId, maka kita tampilkan status pesan KITA
-                    // Status pesan kita bisa 'sent', 'delivered', 'read' (oleh penerima)
-                    // 'chat.lastMessageStatus' yang Anda punya sepertinya sudah benar untuk ini
-                    else -> when (chat.lastMessageStatus) {
-                        "read" -> R.drawable.ic_read // Dibaca oleh penerima
-                        "delivered" -> R.drawable.ic_delivered // Terkirim ke penerima
-                        else -> R.drawable.ic_sent // Terkirim dari kita
-                    }
+                // Pesan terakhir adalah dari pengguna saat ini, tampilkan statusnya
+                statusIndicator.visibility = View.VISIBLE
+                val statusRes = when (chat.lastMessageStatus?.lowercase(Locale.getDefault())) { // Gunakan lastMessageStatus
+                    "read" -> R.drawable.ic_read       // Pesan dibaca oleh penerima
+                    "delivered" -> R.drawable.ic_delivered // Pesan terkirim ke server/penerima
+                    // "sent" bisa menjadi default jika tidak "read" atau "delivered"
+                    // atau jika Anda memiliki status "sent" eksplisit
+                    else -> R.drawable.ic_sent         // Pesan terkirim dari perangkat kita (default)
                 }
                 statusIndicator.setImageResource(statusRes)
-                statusIndicator.visibility = View.VISIBLE
             } else {
-                // Jika pesan terakhir bukan dari kita, atau tidak ada pesan, sembunyikan status.
+                // Pesan terakhir bukan dari pengguna saat ini atau tidak ada pesan,
+                // atau jika Anda ingin menampilkan sesuatu untuk pesan yang diterima (misalnya, jumlah pesan belum dibaca)
+                // Untuk saat ini, kita sembunyikan sesuai permintaan.
                 statusIndicator.visibility = View.GONE
             }
         }
@@ -83,12 +76,12 @@ class ChatAdapter(
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ChatViewHolder {
         val view = LayoutInflater.from(parent.context)
-            .inflate(R.layout.item_chat, parent, false) // Pastikan R.layout.item_chat adalah layout item Anda
+            .inflate(R.layout.item_chat, parent, false)
         return ChatViewHolder(view)
     }
 
     override fun onBindViewHolder(holder: ChatViewHolder, position: Int) {
-        holder.bind(getItem(position)) // ListAdapter menggunakan getItem()
+        holder.bind(getItem(position))
     }
 
     override fun getFilter(): Filter {
@@ -100,7 +93,6 @@ class ChatAdapter(
                 } else {
                     val filterPattern = constraint.toString().lowercase(Locale.getDefault()).trim()
                     originalList.forEach { chat ->
-                        // Cari berdasarkan recipientName yang sudah di-populate
                         if (chat.recipientName?.lowercase(Locale.getDefault())?.contains(filterPattern) == true) {
                             filteredList.add(chat)
                         }
@@ -114,19 +106,18 @@ class ChatAdapter(
             @Suppress("UNCHECKED_CAST")
             override fun publishResults(constraint: CharSequence?, results: FilterResults?) {
                 val newFilteredList = results?.values as? List<Chat> ?: emptyList()
-                submitList(newFilteredList) // Update list yang ditampilkan oleh ListAdapter
+                submitList(newFilteredList)
             }
         }
     }
 }
 
-// DiffUtil Callback untuk ListAdapter
 class ChatDiffCallback : DiffUtil.ItemCallback<Chat>() {
     override fun areItemsTheSame(oldItem: Chat, newItem: Chat): Boolean {
-        return oldItem.id == newItem.id // Gunakan ID unik chat
+        return oldItem.id == newItem.id
     }
 
     override fun areContentsTheSame(oldItem: Chat, newItem: Chat): Boolean {
-        return oldItem == newItem // Bandingkan konten jika model Chat adalah data class
+        return oldItem == newItem
     }
 }

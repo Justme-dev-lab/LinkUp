@@ -3,8 +3,15 @@
     android:height="16dp"
     android:viewportWidth="24"
     android:viewportHeight="24"
-    android:tint="?attr/colorControlNormal">
+    android:tint="#929292">
+
+    <!-- Path Atas: warna putih -->
     <path
         android:fillColor="@android:color/white"
-        android:pathData="M18,7l-1.41,-1.41L9,13.17 5.41,9.59 4,11l5,5 10,-10z"/>
+        android:pathData="M17,7l-1.41,-1.41L8,13.17 4.41,9.59 3,11l5,5 10,-10z" />
+
+    <!-- Path Bawah: warna transparan, sedikit lebih ke kanan dan lebar -->
+    <path
+        android:fillColor="#000000"
+        android:pathData="M20.75,7l-1.41,-1.41L11.75,13.17 8.16,9.59 6.75,11l5,5 10,-10z" />
 </vector>
