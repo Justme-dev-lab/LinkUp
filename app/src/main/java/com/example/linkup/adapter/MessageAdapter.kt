@@ -18,7 +18,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
-import com.example.linkup.MediaViewActivity // PASTIKAN ANDA MEMBUAT ACTIVITY INI
+import com.example.linkup.MediaViewActivity
 import com.example.linkup.R
 import com.example.linkup.model.ChatMessageModel
 import de.hdodenhof.circleimageview.CircleImageView
@@ -56,15 +56,12 @@ class MessageAdapter(
         this.messageList.clear()
         this.messageList.addAll(newMessages)
         notifyDataSetChanged()
-        Log.d(TAG, "Adapter messages updated. New count: ${newMessages.size}")
+        // Log.d(TAG, "Adapter messages updated. New count: ${newMessages.size}") // Optional logging
     }
 
     override fun getItemViewType(position: Int): Int {
         val message = messageList[position]
         val isSender = message.sender == currentUserId
-
-        // Log.d(TAG, "getItemViewType - Pos: $position, MsgType: ${message.type}, SenderID: ${message.sender}, CurrentUID: $currentUserId, IsSender: $isSender, FileURL: ${message.fileUrl}")
-
         return when (message.type) {
             "text" -> if (isSender) MSG_TYPE_RIGHT_TEXT else MSG_TYPE_LEFT_TEXT
             "sound" -> if (isSender) MSG_TYPE_RIGHT_SOUND else MSG_TYPE_LEFT_SOUND
@@ -73,7 +70,7 @@ class MessageAdapter(
             "audio" -> if (isSender) MSG_TYPE_RIGHT_AUDIO else MSG_TYPE_LEFT_AUDIO
             "file" -> if (isSender) MSG_TYPE_RIGHT_FILE else MSG_TYPE_LEFT_FILE
             else -> {
-                Log.w(TAG, "Unknown message type: ${message.type} at position $position. Defaulting to text.")
+                Log.w(TAG, "Unknown message type: ${message.type} at pos $position. Defaulting to text.")
                 if (isSender) MSG_TYPE_RIGHT_TEXT else MSG_TYPE_LEFT_TEXT
             }
         }
@@ -94,18 +91,17 @@ class MessageAdapter(
             MSG_TYPE_LEFT_FILE -> layoutInflater.inflate(R.layout.item_chat_file_left, parent, false)
             MSG_TYPE_RIGHT_AUDIO -> layoutInflater.inflate(R.layout.item_chat_audio_right, parent, false)
             MSG_TYPE_LEFT_AUDIO -> layoutInflater.inflate(R.layout.item_chat_audio_left, parent, false)
-            else -> layoutInflater.inflate(R.layout.chat_item_right, parent, false)
+            else -> layoutInflater.inflate(R.layout.chat_item_right, parent, false) // Default
         }
         return MessageViewHolder(view)
     }
 
-    override fun getItemCount(): Int {
-        return messageList.size
-    }
+    override fun getItemCount(): Int = messageList.size
 
     class MessageViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val showMessage: TextView? = itemView.findViewById(R.id.show_message)
         val profileImage: CircleImageView? = itemView.findViewById(R.id.profile_image_chat_item)
+        val soundTitleTextView: TextView? = itemView.findViewById(R.id.sound_title)
         val playSoundButton: ImageView? = itemView.findViewById(R.id.play_sound_message_btn)
         val messageImageView: ImageView? = itemView.findViewById(R.id.message_image_view)
         val fileNameTextView: TextView? = itemView.findViewById(R.id.file_name_text_view)
@@ -117,81 +113,72 @@ class MessageAdapter(
         val message = messageList[position]
         val viewType = getItemViewType(position)
 
+        // Reset visibility for all potentially used views
         holder.showMessage?.visibility = View.GONE
+        holder.soundTitleTextView?.visibility = View.GONE
+        holder.fileNameTextView?.visibility = View.GONE
         holder.messageImageView?.visibility = View.GONE
         holder.playSoundButton?.visibility = View.GONE
-        holder.fileNameTextView?.visibility = View.GONE
         holder.fileIconImageView?.visibility = View.GONE
         holder.videoPlayOverlay?.visibility = View.GONE
+        holder.profileImage?.visibility = View.GONE // Reset profile image too
 
-        if (viewType !in listOf(MSG_TYPE_RIGHT_TEXT, MSG_TYPE_RIGHT_SOUND, MSG_TYPE_RIGHT_IMAGE,
-                MSG_TYPE_RIGHT_VIDEO, MSG_TYPE_RIGHT_FILE, MSG_TYPE_RIGHT_AUDIO)) {
+        // Profile Image Logic
+        if (viewType !in listOf(
+                MSG_TYPE_RIGHT_TEXT, MSG_TYPE_RIGHT_SOUND, MSG_TYPE_RIGHT_IMAGE,
+                MSG_TYPE_RIGHT_VIDEO, MSG_TYPE_RIGHT_FILE, MSG_TYPE_RIGHT_AUDIO
+            )
+        ) {
             holder.profileImage?.visibility = View.VISIBLE
             holder.profileImage?.let {
                 if (!recipientProfileImageUrl.isNullOrEmpty()) {
-                    Glide.with(context)
-                        .load(recipientProfileImageUrl)
-                        .placeholder(R.drawable.profile)
-                        .error(R.drawable.profile)
-                        .into(it)
+                    Glide.with(context).load(recipientProfileImageUrl)
+                        .placeholder(R.drawable.profile).error(R.drawable.profile).into(it)
                 } else {
                     it.setImageResource(R.drawable.profile)
                 }
             }
-        } else {
-            holder.profileImage?.visibility = View.GONE
         }
 
+        // Bind data based on message type
         when (message.type) {
             "text" -> {
                 holder.showMessage?.visibility = View.VISIBLE
                 holder.showMessage?.text = message.message
             }
-            "sound", "audio" -> {
+            "sound" -> { // Voice Note
+                holder.soundTitleTextView?.visibility = View.VISIBLE
                 holder.playSoundButton?.visibility = View.VISIBLE
-                holder.fileNameTextView?.visibility = View.VISIBLE
-                holder.fileNameTextView?.text = message.soundTitle ?: message.fileName ?: if(message.type == "sound") "Voice Note" else "Audio File"
-                holder.fileIconImageView?.visibility = if(message.type == "audio") View.VISIBLE else View.GONE
-                if(message.type == "audio") holder.fileIconImageView?.setImageResource(R.drawable.ic_audio_file)
+                holder.soundTitleTextView?.text = message.soundTitle ?: "Voice Note"
 
-                if (position == currentlyPlayingPosition && isAudioPlaying) {
-                    holder.playSoundButton?.setImageResource(R.drawable.ic_pause)
-                } else {
-                    holder.playSoundButton?.setImageResource(R.drawable.ic_play)
-                }
-
-                // ===== PENYESUAIAN UNTUK SOUND/AUDIO =====
+                updatePlayPauseButtonState(holder, position)
                 holder.playSoundButton?.setOnClickListener {
-                    if (!message.fileUrl.isNullOrEmpty()) {
-                        handlePlaySound(position, message.fileUrl)
-                    } else {
-                        Toast.makeText(context, "Audio file not available.", Toast.LENGTH_SHORT).show()
-                        Log.w(TAG, "Play sound/audio clicked but fileUrl is null for messageId: ${message.messageId}")
-                    }
+                    handlePlaySoundClick(position, message.fileUrl, message.messageId)
                 }
-                if(message.type == "audio"){
-                    holder.itemView.setOnClickListener {
-                        if (!message.fileUrl.isNullOrEmpty()) {
-                            handlePlaySound(position, message.fileUrl)
-                        } else {
-                            Toast.makeText(context, "Audio file not available.", Toast.LENGTH_SHORT).show()
-                            Log.w(TAG, "Audio item clicked but fileUrl is null for messageId: ${message.messageId}")
-                        }
-                    }
+            }
+            "audio" -> { // General Audio File
+                holder.fileNameTextView?.visibility = View.VISIBLE
+                holder.playSoundButton?.visibility = View.VISIBLE
+                holder.fileIconImageView?.visibility = View.VISIBLE
+
+                holder.fileNameTextView?.text = message.fileName ?: message.soundTitle ?: "Audio File"
+                holder.fileIconImageView?.setImageResource(R.drawable.ic_audio_file)
+
+                updatePlayPauseButtonState(holder, position)
+                val playClickListener = View.OnClickListener {
+                    handlePlaySoundClick(position, message.fileUrl, message.messageId)
                 }
+                holder.playSoundButton?.setOnClickListener(playClickListener)
+                holder.itemView.setOnClickListener(playClickListener) // Allow click on whole item
             }
             "image" -> {
                 holder.messageImageView?.visibility = View.VISIBLE
                 holder.messageImageView?.let { imageView ->
-                    // ===== PENYESUAIAN UNTUK IMAGE =====
                     if (!message.fileUrl.isNullOrEmpty()) {
-                        Glide.with(context)
-                            .load(message.fileUrl)
+                        Glide.with(context).load(message.fileUrl)
                             .placeholder(R.drawable.ic_image_placeholder)
-                            .error(R.drawable.ic_broken_image)
-                            .into(imageView)
+                            .error(R.drawable.ic_broken_image).into(imageView)
                         imageView.setOnClickListener {
-                            // fileUrl sudah dicek non-null di atas untuk Glide
                             val intent = Intent(context, MediaViewActivity::class.java).apply {
                                 putExtra(MediaViewActivity.EXTRA_MEDIA_URL, message.fileUrl)
                                 putExtra(MediaViewActivity.EXTRA_MEDIA_TYPE, "image")
@@ -199,30 +186,25 @@ class MessageAdapter(
                             context.startActivity(intent)
                         }
                     } else {
-                        imageView.setImageResource(R.drawable.ic_broken_image) // Tampilkan gambar rusak jika URL null
+                        imageView.setImageResource(R.drawable.ic_broken_image)
                         Log.w(TAG, "Image fileUrl is null for messageId: ${message.messageId}")
-                        // Nonaktifkan klik jika tidak ada URL
                         imageView.setOnClickListener(null)
                     }
                 }
             }
             "video" -> {
-                holder.messageImageView?.visibility = View.VISIBLE
+                holder.messageImageView?.visibility = View.VISIBLE // For thumbnail
                 holder.videoPlayOverlay?.visibility = View.VISIBLE
                 holder.fileNameTextView?.visibility = View.VISIBLE
                 holder.fileNameTextView?.text = message.fileName ?: "Video"
 
-                // ===== PENYESUAIAN UNTUK VIDEO =====
                 if (!message.fileUrl.isNullOrEmpty()) {
-                    Glide.with(context)
-                        .load(message.fileUrl) // Asumsi fileUrl adalah URL video yang bisa jadi thumbnail
+                    Glide.with(context).load(message.fileUrl) // Thumbnail
                         .placeholder(R.drawable.ic_video_placeholder)
-                        .error(R.drawable.ic_broken_image)
-                        .centerCrop()
-                        .into(holder.messageImageView!!) // Hati-hati dengan !! jika messageImageView bisa null
+                        .error(R.drawable.ic_broken_image).centerCrop()
+                        .into(holder.messageImageView!!) // Use with caution if messageImageView can be from a different layout type
 
                     holder.itemView.setOnClickListener {
-                        // fileUrl sudah dicek non-null di atas
                         val intent = Intent(context, MediaViewActivity::class.java).apply {
                             putExtra(MediaViewActivity.EXTRA_MEDIA_URL, message.fileUrl)
                             putExtra(MediaViewActivity.EXTRA_MEDIA_TYPE, "video")
@@ -230,11 +212,10 @@ class MessageAdapter(
                         context.startActivity(intent)
                     }
                 } else {
-                    holder.messageImageView?.setImageResource(R.drawable.ic_video_placeholder) // Placeholder jika URL null
+                    holder.messageImageView?.setImageResource(R.drawable.ic_video_placeholder)
                     Log.w(TAG, "Video fileUrl is null for messageId: ${message.messageId}")
-                    // Nonaktifkan klik jika tidak ada URL
                     holder.itemView.setOnClickListener(null)
-                    holder.videoPlayOverlay?.visibility = View.GONE // Sembunyikan overlay play jika tidak ada video
+                    holder.videoPlayOverlay?.visibility = View.GONE
                 }
             }
             "file" -> {
@@ -243,63 +224,69 @@ class MessageAdapter(
                 holder.fileNameTextView?.text = message.fileName ?: "File"
                 holder.fileIconImageView?.setImageResource(getFileIconResource(message.fileName))
 
-                // ===== PENYESUAIAN UNTUK FILE =====
                 if (!message.fileUrl.isNullOrEmpty()) {
                     holder.itemView.setOnClickListener {
-                        // fileUrl sudah dicek non-null
-                        val fileName = message.fileName ?: "downloaded_file"
-                        downloadAndOpenFile(message.fileUrl!!, fileName) // fileUrl di sini aman karena sudah dicek
+                        val fileName = message.fileName ?: "downloaded_file_${System.currentTimeMillis()}"
+                        downloadAndOpenFile(message.fileUrl!!, fileName)
                     }
                 } else {
                     Log.w(TAG, "File fileUrl is null for messageId: ${message.messageId}")
                     Toast.makeText(context, "File not available.", Toast.LENGTH_SHORT).show()
-                    // Nonaktifkan klik jika tidak ada URL
                     holder.itemView.setOnClickListener(null)
                 }
             }
             else -> {
                 holder.showMessage?.visibility = View.VISIBLE
-                holder.showMessage?.text = message.message // message adalah non-null di model Anda
+                holder.showMessage?.text = message.message // Or "Unsupported message type"
+                Log.w(TAG, "Unhandled message type: ${message.type} at pos $position.")
             }
         }
     }
 
-    // handlePlaySound sudah cukup baik dalam menangani fileUrl null di awal.
-    private fun handlePlaySound(clickedPosition: Int, fileUrl: String?) { // parameter fileUrl sudah nullable
-        if (fileUrl.isNullOrEmpty()) { // Pemeriksaan sudah ada di sini
-            Toast.makeText(context, "Audio source not found", Toast.LENGTH_SHORT).show()
-            Log.w(TAG, "handlePlaySound called with null/empty fileUrl.")
-            return
+    private fun updatePlayPauseButtonState(holder: MessageViewHolder, position: Int) {
+        if (position == currentlyPlayingPosition && isAudioPlaying) {
+            holder.playSoundButton?.setImageResource(R.drawable.ic_pause)
+        } else {
+            holder.playSoundButton?.setImageResource(R.drawable.ic_play)
         }
+    }
 
-        // ... sisa logika handlePlaySound ...
+    private fun handlePlaySoundClick(position: Int, fileUrl: String?, messageId: String?) {
+        if (!fileUrl.isNullOrEmpty()) {
+            handlePlaySound(position, fileUrl) // Pass non-null fileUrl
+        } else {
+            Toast.makeText(context, "Audio file not available.", Toast.LENGTH_SHORT).show()
+            Log.w(TAG, "Play sound/audio clicked but fileUrl is null for messageId: $messageId")
+        }
+    }
+
+    private fun handlePlaySound(clickedPosition: Int, fileUrl: String) { // fileUrl is non-null here
         if (clickedPosition == currentlyPlayingPosition && isAudioPlaying) {
             chatMediaPlayer?.pause()
             isAudioPlaying = false
-            notifyItemChanged(currentlyPlayingPosition)
+            notifyItemChanged(currentlyPlayingPosition) // Update only the affected item
         } else {
-            chatMediaPlayer?.release()
+            chatMediaPlayer?.release() // Release previous player if any
             chatMediaPlayer = null
-            if(isAudioPlaying) {
+
+            if (isAudioPlaying) { // If another audio was playing, update its UI
                 val oldPlayingPosition = currentlyPlayingPosition
                 isAudioPlaying = false
-                notifyItemChanged(oldPlayingPosition)
+                if (oldPlayingPosition != -1) notifyItemChanged(oldPlayingPosition)
             }
+
             currentlyPlayingPosition = clickedPosition
             isAudioPlaying = true
-            playSoundUrlInternal(fileUrl, clickedPosition) // fileUrl diteruskan
-            notifyItemChanged(clickedPosition)
+            playSoundUrlInternal(fileUrl, clickedPosition)
+            notifyItemChanged(clickedPosition) // Update the newly playing item
         }
     }
 
-
-    private fun playSoundUrlInternal(url: String, position: Int) { // url di sini diharapkan non-null karena sudah dicek sebelumnya
+    private fun playSoundUrlInternal(url: String, position: Int) {
         try {
             chatMediaPlayer = MediaPlayer().apply {
-                setDataSource(url) // url tidak akan null di sini jika alurnya benar
-                setOnPreparedListener {
-                    start()
-                }
+                setDataSource(url)
+                setOnPreparedListener { start() }
                 setOnCompletionListener { mp ->
                     mp.release()
                     if (position == currentlyPlayingPosition) {
@@ -311,6 +298,7 @@ class MessageAdapter(
                 }
                 setOnErrorListener { mp, _, _ ->
                     Toast.makeText(context, "Cannot play audio", Toast.LENGTH_SHORT).show()
+                    Log.e(TAG, "MediaPlayer Error for URL: $url")
                     mp.release()
                     if (position == currentlyPlayingPosition) {
                         isAudioPlaying = false
@@ -324,7 +312,7 @@ class MessageAdapter(
             }
         } catch (e: Exception) {
             Toast.makeText(context, "Error playing audio: ${e.message}", Toast.LENGTH_SHORT).show()
-            Log.e(TAG, "Error playing sound URL: $url", e)
+            Log.e(TAG, "Error setting up MediaPlayer for URL: $url", e)
             if (position == currentlyPlayingPosition) {
                 isAudioPlaying = false
                 notifyItemChanged(currentlyPlayingPosition)
@@ -346,15 +334,13 @@ class MessageAdapter(
         }
     }
 
-    // downloadAndOpenFile sudah menerima fileUrl sebagai non-null, yang baik.
-    // Pastikan pemanggilannya selalu memberikan URL yang valid.
     private fun downloadAndOpenFile(fileUrl: String, fileName: String) {
         val mimeType = MimeTypeMap.getSingleton().getMimeTypeFromExtension(
             fileName.substringAfterLast('.', "").lowercase()
         ) ?: "*/*"
 
         try {
-            val request = DownloadManager.Request(Uri.parse(fileUrl)) // fileUrl tidak akan null di sini
+            val request = DownloadManager.Request(Uri.parse(fileUrl))
                 .setTitle(fileName)
                 .setDescription("Downloading file...")
                 .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
@@ -369,18 +355,17 @@ class MessageAdapter(
 
         } catch (e: Exception) {
             Log.e(TAG, "Error starting download for $fileUrl: ${e.localizedMessage}", e)
-            Toast.makeText(context, "Failed to start download. Trying to open directly...", Toast.LENGTH_LONG).show()
-            openExternalApp(fileUrl, mimeType) // fileUrl diteruskan
+            Toast.makeText(context, "Download failed. Trying to open directly...", Toast.LENGTH_LONG).show()
+            openExternalApp(fileUrl, mimeType)
         }
     }
 
-
-    private fun openExternalApp(url: String, type: String) { // url di sini diharapkan non-null
+    private fun openExternalApp(url: String, type: String) {
         try {
             val intent = Intent(Intent.ACTION_VIEW).apply {
-                setDataAndType(Uri.parse(url), type) // url tidak akan null di sini
+                setDataAndType(Uri.parse(url), type)
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) // Needed if starting from non-Activity context
             }
             if (intent.resolveActivity(context.packageManager) != null) {
                 context.startActivity(intent)
@@ -390,7 +375,7 @@ class MessageAdapter(
         } catch (e: ActivityNotFoundException) {
             Toast.makeText(context, "No application can handle this request.", Toast.LENGTH_LONG).show()
             Log.e(TAG, "ActivityNotFoundException for URL: $url, Type: $type", e)
-        } catch (e: Exception) {
+        } catch (e: Exception) { // Catch more general exceptions
             Toast.makeText(context, "Error opening file: ${e.message}", Toast.LENGTH_SHORT).show()
             Log.e(TAG, "Error opening URL: $url, Type: $type", e)
         }
@@ -399,11 +384,11 @@ class MessageAdapter(
     fun releaseMediaPlayer() {
         chatMediaPlayer?.release()
         chatMediaPlayer = null
-        isAudioPlaying = false
-        if (currentlyPlayingPosition != -1) {
+        if (isAudioPlaying && currentlyPlayingPosition != -1) {
+            isAudioPlaying = false // Ensure state is reset
             notifyItemChanged(currentlyPlayingPosition)
-            currentlyPlayingPosition = -1
         }
-        Log.d(TAG, "MediaPlayer released")
+        currentlyPlayingPosition = -1
+        // Log.d(TAG, "MediaPlayer released") // Optional logging
     }
 }
