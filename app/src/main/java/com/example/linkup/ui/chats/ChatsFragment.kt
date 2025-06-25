@@ -113,36 +113,57 @@ class ChatsFragment : Fragment(), BottomNavHeightListener {
         }
     }
 
+    // Di dalam ChatsFragment.kt
+
     private fun loadCurrentUserProfileImageToHeader() {
-        val userId = currentUserId ?: return
+        // Pastikan currentUserId tidak null sebelum melanjutkan
+        val userId = currentUserId ?: run {
+            Log.w("ChatsFragment", "loadCurrentUserProfileImageToHeader: currentUserId is null.")
+            // Hanya set gambar default jika view masih ada
+            if (isAdded && _binding != null) {
+                binding.profileButton.setImageResource(R.drawable.ic_profile)
+            }
+            return
+        }
+
         val userRef = FirebaseDatabase.getInstance().getReference("users").child(userId)
         userRef.addListenerForSingleValueEvent(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
-                if (snapshot.exists() && isAdded && _binding != null) {
+                // Tambahkan pengecekan `isAdded` dan `_binding != null` untuk menghindari crash
+                // jika fragment dihancurkan atau binding null sebelum callback selesai.
+                if (!isAdded || _binding == null) {
+                    Log.w("ChatsFragment", "onDataChange for profile image: Fragment not added or binding is null.")
+                    return
+                }
+
+                if (snapshot.exists()) {
                     val profileImageUrl = snapshot.child("profile").getValue(String::class.java)
+
                     if (!profileImageUrl.isNullOrEmpty()) {
-                        Glide.with(requireContext())
+                        Log.d("ChatsFragment", "Glide: Attempting to load image URL for header: $profileImageUrl")
+                        Glide.with(requireContext()) // Gunakan requireContext() yang lebih aman di Fragment
                             .load(profileImageUrl)
                             .placeholder(R.drawable.ic_profile)
+                            .error(R.drawable.ic_profile_error) // Tambahkan drawable error untuk kasus gagal load
                             .apply(RequestOptions.circleCropTransform())
-                            .into(binding.profileButton)
+                            .into(binding.profileButton) // Pastikan ID ini benar (binding.profileButton)
                     } else {
                         binding.profileButton.setImageResource(R.drawable.ic_profile)
                         Log.w("ChatsFragment", "Profile image URL is null or empty for header button.")
                     }
-                } else if (isAdded && _binding != null) {
+                } else {
                     binding.profileButton.setImageResource(R.drawable.ic_profile)
-                    if (!snapshot.exists()){
-                        Log.w("ChatsFragment", "User data not found for profile image in header for UID: $userId")
-                    }
+                    Log.w("ChatsFragment", "User data not found for profile image in header for UID: $userId")
                 }
             }
 
             override fun onCancelled(error: DatabaseError) {
-                Log.e("ChatsFragment", "Failed to load profile image for header.", error.toException())
-                if (isAdded && _binding != null) {
-                    binding.profileButton.setImageResource(R.drawable.ic_profile)
+                if (!isAdded || _binding == null) {
+                    Log.w("ChatsFragment", "onCancelled for profile image: Fragment not added or binding is null.")
+                    return
                 }
+                Log.e("ChatsFragment", "Failed to load profile image for header.", error.toException())
+                binding.profileButton.setImageResource(R.drawable.ic_profile_error) // Tampilkan ikon error
             }
         })
     }

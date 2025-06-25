@@ -22,7 +22,7 @@ import com.google.firebase.database.FirebaseDatabase
 // Definisikan URL sebagai konstanta jika tidak menggunakan google-services.json secara default
 object FirebaseConstants {
     const val DATABASE_URL = "https://linkup-3b210-default-rtdb.asia-southeast1.firebasedatabase.app"
-    const val DEFAULT_PROFILE_IMAGE_URL = "https://firebasestorage.googleapis.com/v0/b/linkup-3b210.appspot.com/o/profile.png?alt=media&token=b7f14feb-eff2-4cc4-92a9-de46b3dbf428"
+    const val DEFAULT_PROFILE_IMAGE_URL = "https://firebasestorage.googleapis.com/v0/b/linkup-3b210.firebasestorage.app/o/profile.png?alt=media&token=b7f14feb-eff2-4cc4-92a9-de46b3dbf428"
 }
 
 class RegisterActivity : AppCompatActivity() {

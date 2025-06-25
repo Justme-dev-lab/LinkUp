@@ -12,6 +12,7 @@ data class Chat(
     val lastMessageStatus: String? = null, // "sent", "delivered", "read"
     val createdBy: String? = null, // User yang memulai chat
     val createdAt: Long = System.currentTimeMillis(),
+    val isArchived: Boolean = false,
 
     // Field ini akan diisi secara manual di ChatsFragment setelah mengambil data user lain
     @get:Exclude
@@ -28,7 +29,7 @@ data class Chat(
     val readBy: Map<String, Boolean>? = null // Map<UserId, isRead>
 ) {
     // Kosongkan konstruktor tanpa argumen untuk Firebase
-    constructor() : this(null, mapOf(), null, 0, null, null, null, 0, null, null, null, null, false, null)
+    constructor() : this(null, mapOf(), null, 0, null, null, null, 0, false, null, null, null, null, false, null)
 
     // Fungsi helper (opsional, bisa juga di Fragment/Adapter)
     // Untuk mendapatkan nama chat yang akan ditampilkan (bisa nama user lain atau nama grup)

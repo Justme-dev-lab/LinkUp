@@ -197,7 +197,13 @@ class MessageChatActivity : AppCompatActivity(), SoundSelectionListener {
                     "sound" -> "Sent a sound: ${soundTitle ?: "Sound"}"
                     else -> "Sent an attachment"
                 }
-                updateChatListNode(senderId, receiverId, lastMessageDisplay, System.currentTimeMillis())
+                updateChatListNode(
+                    participant1Id = senderId,
+                    participant2Id = receiverId,
+                    lastMessage = lastMessageDisplay,
+                    timestamp = System.currentTimeMillis(),
+                    actualLastMessageSenderId = senderId // ID pengirim pesan saat ini
+                )
             }
             .addOnFailureListener { e ->
                 Toast.makeText(this, "Failed to send message: ${e.message}", Toast.LENGTH_SHORT).show()
@@ -205,22 +211,35 @@ class MessageChatActivity : AppCompatActivity(), SoundSelectionListener {
             }
     }
 
-    private fun updateChatListNode(user1Id: String, user2Id: String, lastMessage: String, timestamp: Long) {
-        val chatRef = FirebaseDatabase.getInstance().getReference("chats").child(chatId!!) // chatId sudah pasti non-null di sini
+    private fun updateChatListNode(
+        participant1Id: String,             // ID partisipan pertama dalam chat
+        participant2Id: String,             // ID partisipan kedua dalam chat
+        lastMessage: String,
+        timestamp: Long,
+        actualLastMessageSenderId: String // ID pengguna yang mengirim pesan terakhir ini
+    ) {
+        // chatId sudah harus ditentukan sebelumnya (misalnya di onCreate)
+        // dan merujuk pada ID unik untuk percakapan antara participant1Id dan participant2Id.
+        if (chatId == null) {
+            Log.e(TAG, "chatId is null in updateChatListNode. Cannot update chat node.")
+            return
+        }
+        val chatRef = FirebaseDatabase.getInstance().getReference("chats").child(chatId!!)
 
-        val chatInfo = mapOf(
+        val chatInfo = mutableMapOf<String, Any>(
             "lastMessage" to lastMessage,
             "lastMessageTime" to timestamp,
+            "lastMessageSenderId" to actualLastMessageSenderId, // Menggunakan ID pengirim yang benar
             "participants" to mapOf(
-                user1Id to true,
-                user2Id to true
+                participant1Id to true, // Partisipan 1
+                participant2Id to true  // Partisipan 2
             ),
-            "isGroupChat" to false // Asumsi bukan grup chat
-            // Anda bisa menambahkan field lain seperti lastMessageSenderId jika perlu
+            "isGroupChat" to false // Asumsi ini untuk chat 1-ke-1
+            // "lastMessageStatus" to "sent" // Anda bisa menambahkan ini jika perlu
         )
 
         chatRef.updateChildren(chatInfo)
-            .addOnSuccessListener { Log.d(TAG, "Chat list node updated for $chatId") }
+            .addOnSuccessListener { Log.d(TAG, "Chat list node updated for $chatId with sender $actualLastMessageSenderId") }
             .addOnFailureListener { e -> Log.e(TAG, "Failed to update chat list node for $chatId", e) }
     }
 

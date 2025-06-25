@@ -51,35 +51,37 @@
                 android:id="@+id/progressBarDeviceStorage"
                 style="?android:attr/progressBarStyleHorizontal"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="20dp"
                 android:layout_marginTop="8dp"
                 android:max="100"
+                android:progressDrawable="@drawable/custom_device_storage_progressbar"
                 tools:progress="30"
-                tools:secondaryProgress="70"/> <!-- Contoh untuk secondary progress -->
+                tools:secondaryProgress="70"/>
 
-            <LinearLayout
-                android:layout_width="match_parent"
+            <!-- Info Detail Penyimpanan (disusun vertikal agar lebih rapi) -->
+            <TextView
+                android:id="@+id/textViewAppStorage"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginTop="4dp">
+                android:layout_marginTop="8dp"
+                tools:text="LinkUp: 1.2 GB (10%)"
+                android:textSize="14sp"/>
 
-                <TextView
-                    android:id="@+id/textViewAppStorage"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    tools:text="LinkUp: 1.2 GB"
-                    android:textSize="14sp"/>
+            <TextView
+                android:id="@+id/textViewOtherAppsStorage"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                tools:text="Other Apps: 10.5 GB (40%)"
+                android:textSize="14sp" />
 
-                <TextView
-                    android:id="@+id/textViewFreeStorage"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    tools:text="Free: 25.5 GB"
-                    android:textSize="14sp"/>
-            </LinearLayout>
-            <!-- Anda bisa menambahkan TextView lain di sini untuk "Other Apps" jika mau -->
-
+            <TextView
+                android:id="@+id/textViewFreeStorage"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                tools:text="Free: 25.5 GB (50%)"
+                android:textSize="14sp"/>
 
             <com.google.android.material.divider.MaterialDivider
                 android:layout_width="match_parent"
@@ -87,6 +89,7 @@
                 android:layout_marginTop="24dp"
                 android:layout_marginBottom="16dp"/>
 
+            <!-- Tombol-tombol -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/buttonManageStorage"
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"

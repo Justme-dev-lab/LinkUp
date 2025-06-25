@@ -1,5 +1,6 @@
 package com.example.linkup.ui.chats
 
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -53,24 +54,37 @@ class ChatAdapter(
                 .error(R.drawable.ic_profile)
                 .into(profileImage)
 
-            // Logika untuk menampilkan status pesan
-            if (chat.lastMessageSenderId == currentUserId && !chat.lastMessage.isNullOrEmpty()) {
-                // Pesan terakhir adalah dari pengguna saat ini, tampilkan statusnya
+            // ------------------ AWAL BAGIAN PENTING DENGAN LOGGING ------------------
+            // Pastikan currentUserId tidak null sebelum perbandingan
+            val isMyMessage = currentUserId != null && chat.lastMessageSenderId == currentUserId
+
+            // LOGGING KRUSIAL:
+            Log.d("ChatAdapterDebug", "-----------------------------------------------------")
+            Log.d("ChatAdapterDebug", "Binding chat ID: ${chat.id}")
+            Log.d("ChatAdapterDebug", "Last Message: \"${chat.lastMessage}\"")
+            Log.d("ChatAdapterDebug", "Adapter currentUserId: $currentUserId")
+            Log.d("ChatAdapterDebug", "Chat lastMessageSenderId: ${chat.lastMessageSenderId}")
+            Log.d("ChatAdapterDebug", "Is My Message? $isMyMessage")
+            Log.d("ChatAdapterDebug", "Chat lastMessageStatus: ${chat.lastMessageStatus}")
+
+
+            if (isMyMessage && !chat.lastMessage.isNullOrEmpty()) {
                 statusIndicator.visibility = View.VISIBLE
-                val statusRes = when (chat.lastMessageStatus?.lowercase(Locale.getDefault())) { // Gunakan lastMessageStatus
-                    "read" -> R.drawable.ic_read       // Pesan dibaca oleh penerima
-                    "delivered" -> R.drawable.ic_delivered // Pesan terkirim ke server/penerima
-                    // "sent" bisa menjadi default jika tidak "read" atau "delivered"
-                    // atau jika Anda memiliki status "sent" eksplisit
-                    else -> R.drawable.ic_sent         // Pesan terkirim dari perangkat kita (default)
+                Log.d("ChatAdapterDebug", "VISEME: Pesan dari SAYA. Menampilkan status.")
+
+                val statusRes = when (chat.lastMessageStatus?.lowercase(Locale.getDefault())) {
+                    "read" -> R.drawable.ic_read
+                    "delivered" -> R.drawable.ic_delivered
+                    else -> R.drawable.ic_sent
                 }
                 statusIndicator.setImageResource(statusRes)
             } else {
-                // Pesan terakhir bukan dari pengguna saat ini atau tidak ada pesan,
-                // atau jika Anda ingin menampilkan sesuatu untuk pesan yang diterima (misalnya, jumlah pesan belum dibaca)
-                // Untuk saat ini, kita sembunyikan sesuai permintaan.
                 statusIndicator.visibility = View.GONE
+                Log.d("ChatAdapterDebug", "VISEME: Pesan dari LAWAN atau KOSONG. Menyembunyikan status.")
             }
+            Log.d("ChatAdapterDebug", "Final statusIndicator visibility: ${statusIndicator.visibility == View.VISIBLE}")
+            Log.d("ChatAdapterDebug", "-----------------------------------------------------")
+            // ------------------- AKHIR BAGIAN PENTING DENGAN LOGGING -------------------
         }
     }
 

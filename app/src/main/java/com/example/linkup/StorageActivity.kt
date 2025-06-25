@@ -40,8 +40,13 @@ class StorageActivity : AppCompatActivity() {
         }
 
         binding.buttonArchiveChats.setOnClickListener {
-            Toast.makeText(this, "Archive Chats clicked - Implement selection logic", Toast.LENGTH_LONG).show()
-            // Intent(this, SelectChatsToArchiveActivity::class.java).also { startActivity(it) }
+            // Toast.makeText(this, "Archive Chats clicked - Implement selection logic", Toast.LENGTH_LONG).show()
+            // Mengganti Toast dengan Intent untuk membuka Activity baru
+            val intent = Intent(this, SelectChatsArchiveActivity::class.java)
+            // Anda mungkin ingin meneruskan data ke SelectChatsToArchiveActivity,
+            // misalnya, daftar chat ID yang ada untuk memudahkan pemilihan.
+            // intent.putStringArrayListExtra("EXISTING_CHAT_IDS", ArrayList(viewModel.chatStorageList.value?.map { it.chatId } ?: listOf()))
+            startActivity(intent)
         }
     }
 
@@ -63,15 +68,16 @@ class StorageActivity : AppCompatActivity() {
 
     private fun observeViewModel() {
         viewModel.storageInfo.observe(this) { info ->
-            binding.textViewAppStorage.text = "LinkUp: ${info.linkupAppUsedStorageFormatted}"
-            // Anda mungkin ingin menampilkan info lain seperti otherAppsUsedStorageFormatted
-            binding.textViewFreeStorage.text = "Free: ${info.freeDeviceStorageFormatted}"
+            binding.textViewAppStorage.text = "LinkUp: ${info.linkupAppUsedStorageFormatted} (${info.linkupAppStoragePercentage}%)"
+            binding.textViewOtherAppsStorage.text = "Other Apps: ${info.otherAppsUsedStorageFormatted} (${info.otherAppsStoragePercentage}%)"
+            binding.textViewFreeStorage.text = "Free: ${info.freeDeviceStorageFormatted} (${info.freeStoragePercentage}%)"
 
-            // Update ProgressBar (asumsikan kita ingin menunjukkan % LinkUp dari Total)
-            // Atau Anda bisa menggunakan MultiProgressBar jika ingin menunjukkan semua segmen
+            // Update ProgressBar
             binding.progressBarDeviceStorage.max = 100 // Total percentage
             binding.progressBarDeviceStorage.progress = info.linkupAppStoragePercentage
-            // binding.progressBarDeviceStorage.secondaryProgress = info.linkupAppStoragePercentage + info.otherAppsStoragePercentage // Jika ingin menunjukkan gabungan
+            // Set secondaryProgress untuk menunjukkan LinkUp + OtherApps
+            // Bagian OtherApps akan muncul setelah LinkUp
+            binding.progressBarDeviceStorage.secondaryProgress = (info.linkupAppStoragePercentage + info.otherAppsStoragePercentage).coerceAtMost(100)
         }
 
         viewModel.chatStorageList.observe(this) { chats ->
