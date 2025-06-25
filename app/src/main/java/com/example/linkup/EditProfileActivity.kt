@@ -22,6 +22,7 @@ class EditProfileActivity : AppCompatActivity() {
     private val IMAGE_PICK_CODE = 1000
     private lateinit var profileImageView: ImageView
     private var imageUri: Uri? = null
+    private lateinit var backToProfileButton: Button // Deklarasi untuk tombol kembali
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -31,6 +32,17 @@ class EditProfileActivity : AppCompatActivity() {
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
+        }
+        // Inisialisasi tombol kembali
+        backToProfileButton = findViewById(R.id.backtoprof) // Pastikan ID ini benar
+        backToProfileButton.setOnClickListener {
+            // Intent untuk kembali ke ProfileActivity
+            val intent = Intent(this, ProfileActivity::class.java)
+            // Optional: Jika Anda ingin membersihkan tumpukan aktivitas di atas ProfileActivity
+            // dan memastikan ProfileActivity tidak dibuat ulang jika sudah ada di atas tumpukan:
+            intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            startActivity(intent)
+            finish() // Tutup EditProfileActivity setelah kembali
         }
 
         val simpanButton = findViewById<Button>(R.id.simpanbtn)
@@ -60,6 +72,8 @@ class EditProfileActivity : AppCompatActivity() {
                 updateUserProfile(null)
             }
         }
+
+
 
         profileImageView = findViewById(R.id.editProfileImage)
 
