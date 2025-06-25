@@ -1,9 +1,14 @@
 package com.example.linkup
 
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Intent
+import android.database.Cursor
+import android.net.Uri
 import android.os.Bundle
+import android.provider.OpenableColumns
 import android.util.Log
+import android.view.View
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -19,13 +24,16 @@ import com.example.linkup.ui.chats.SoundSelectionListener
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.database.*
+import com.google.firebase.storage.FirebaseStorage
+import com.google.firebase.storage.StorageReference
+import java.util.UUID
 
 class MessageChatActivity : AppCompatActivity(), SoundSelectionListener {
 
     private lateinit var binding: ActivityMessageChatBinding
 
     private var firebaseUser: FirebaseUser? = null
-    private var currentUserId: String? = null // Tambahkan ini untuk konsistensi
+    private var currentUserId: String? = null
     private var recipientUserId: String? = null
     private var recipientUserName: String? = null
     private var recipientProfileImageUrl: String? = null
@@ -33,11 +41,11 @@ class MessageChatActivity : AppCompatActivity(), SoundSelectionListener {
     private lateinit var messageAdapter: MessageAdapter
     private val messagesList: MutableList<ChatMessageModel> = mutableListOf()
 
-    private lateinit var messagesRef: DatabaseReference // Untuk messages/{chatId}
+    private lateinit var messagesRef: DatabaseReference
     private var messagesListener: ChildEventListener? = null
 
-    private var chatDetailsRef: DatabaseReference? = null // Untuk chats/{chatId}
-    private var chatStatusListener: ValueEventListener? = null // Listener untuk status di chats node
+    private var chatDetailsRef: DatabaseReference? = null
+    // private var chatStatusListener: ValueEventListener? = null // Tidak digunakan secara aktif di kode yang Anda berikan
 
     private var chatId: String? = null
 
@@ -47,10 +55,22 @@ class MessageChatActivity : AppCompatActivity(), SoundSelectionListener {
             if (result.resultCode == Activity.RESULT_OK) {
                 val data: Intent? = result.data
                 data?.data?.let { fileUri ->
-                    Toast.makeText(this, "File selected: ${fileUri.toString()}", Toast.LENGTH_LONG).show()
-                    // Implementasi upload dan pengiriman pesan attachment...
-                    // uploadFileToStorage(fileUri)
+                    // Dapatkan tipe MIME dari file URI
+                    val mimeType = contentResolver.getType(fileUri)
+                    Log.d(TAG, "File selected: ${fileUri.path}, MIME type: $mimeType")
+
+                    // Tentukan folder penyimpanan dan tipe pesan berdasarkan tipe MIME
+                    val (storageFolder, messageType) = when {
+                        mimeType?.startsWith("image/") == true -> "images" to "image"
+                        mimeType?.startsWith("video/") == true -> "videos" to "video"
+                        mimeType?.startsWith("audio/") == true -> "audios" to "audio"
+                        // Tambahkan lebih banyak tipe jika perlu (misalnya, "application/pdf" -> "documents" to "pdf")
+                        else -> "files" to "file" // Default untuk tipe lain atau tidak dikenal
+                    }
+                    uploadFileToStorage(fileUri, storageFolder, messageType)
                 }
+            } else {
+                Log.d(TAG, "Attachment selection cancelled or failed.")
             }
         }
 
@@ -80,7 +100,6 @@ class MessageChatActivity : AppCompatActivity(), SoundSelectionListener {
             return
         }
 
-        // Tentukan chatId secara konsisten
         chatId = if (currentUserId!! < recipientUserId!!) {
             "${currentUserId!!}-$recipientUserId"
         } else {
@@ -98,7 +117,12 @@ class MessageChatActivity : AppCompatActivity(), SoundSelectionListener {
             if (messageText.isEmpty()) {
                 Toast.makeText(this@MessageChatActivity, "Please write a message", Toast.LENGTH_SHORT).show()
             } else {
-                sendMessageToUser(currentUserId!!, recipientUserId!!, messageText)
+                sendMessageToUser(
+                    senderId = currentUserId!!,
+                    receiverId = recipientUserId!!,
+                    message = messageText,
+                    messageType = "text" // Tipe default untuk pesan teks
+                )
                 binding.textMessage.setText("")
             }
         }
@@ -117,15 +141,10 @@ class MessageChatActivity : AppCompatActivity(), SoundSelectionListener {
         }
 
         attachMessagesListener()
-        // Tidak perlu attachChatStatusListener di sini jika hanya untuk update "read" saat activity dibuka.
-        // markChatAsRead akan menangani ini saat activity dibuka.
-        // Jika Anda ingin update "delivered" secara real-time saat penerima online, listener ini diperlukan.
     }
 
     override fun onResume() {
         super.onResume()
-        // Penting: Tandai chat sebagai "read" ketika activity menjadi visible oleh pengguna.
-        // Juga, ini adalah tempat yang baik untuk memperbarui status menjadi "delivered" jika belum.
         markChatMessagesAsReadOrDelivered()
     }
 
@@ -152,15 +171,11 @@ class MessageChatActivity : AppCompatActivity(), SoundSelectionListener {
     }
 
     private fun setupRecyclerView() {
-        // Asumsi MessageAdapter Anda tidak memerlukan recipientProfileImageUrl jika sudah di-handle
-        // di item layout atau Anda mengambilnya dari user data di adapter.
-        // Jika MessageAdapter memerlukan currentUserId untuk logika tampilan (misal, alignment pesan),
-        // pastikan itu diteruskan.
         messageAdapter = MessageAdapter(this, messagesList, currentUserId!!, recipientProfileImageUrl)
         binding.recycleViewChats.apply {
             setHasFixedSize(true)
             val linearLayoutManager = LinearLayoutManager(this@MessageChatActivity)
-            linearLayoutManager.stackFromEnd = true // Pesan baru muncul di bawah
+            linearLayoutManager.stackFromEnd = true
             layoutManager = linearLayoutManager
             adapter = messageAdapter
         }
@@ -169,25 +184,28 @@ class MessageChatActivity : AppCompatActivity(), SoundSelectionListener {
     private fun sendMessageToUser(
         senderId: String,
         receiverId: String,
-        message: String,
-        messageType: String = "text",
+        message: String, // Bisa berupa teks pesan, nama file, atau deskripsi attachment
+        messageType: String, // "text", "image", "video", "audio", "file", "sound"
         fileUrl: String? = null,
-        soundTitle: String? = null
+        soundTitle: String? = null,
+        fileName: String? = null // Tambahkan parameter untuk nama file
     ) {
-        val messagePushRef = messagesRef.push() // Dapatkan referensi push dulu untuk ID pesan
-        val messageId = messagePushRef.key ?: "" // Dapatkan ID pesan unik
+        val messagePushRef = messagesRef.push()
+        val messageId = messagePushRef.key ?: ""
 
         val messageData = HashMap<String, Any>()
-        messageData["messageId"] = messageId // Simpan ID pesan jika perlu
+        messageData["messageId"] = messageId
         messageData["sender"] = senderId
         messageData["receiver"] = receiverId
-        messageData["message"] = message
+        messageData["message"] = message // Untuk teks atau deskripsi/nama file attachment
         messageData["timestamp"] = System.currentTimeMillis()
         messageData["type"] = messageType
-        // messageData["status"] = "sent" // <-- Status per pesan, jika Anda ingin melacaknya di node 'messages'
 
         if (fileUrl != null) {
             messageData["fileUrl"] = fileUrl
+        }
+        if (fileName != null && messageType != "text" && messageType != "sound") {
+            messageData["fileName"] = fileName // Simpan nama file untuk attachment
         }
         if (soundTitle != null && messageType == "sound") {
             messageData["soundTitle"] = soundTitle
@@ -199,16 +217,19 @@ class MessageChatActivity : AppCompatActivity(), SoundSelectionListener {
                 val lastMessageDisplay = when (messageType) {
                     "text" -> message
                     "sound" -> "Sent a sound: ${soundTitle ?: "Sound"}"
+                    "image" -> "📷 ${fileName ?: "Image"}" // Tampilkan nama file jika ada
+                    "video" -> "📹 ${fileName ?: "Video"}"
+                    "audio" -> "🎵 ${fileName ?: "Audio"}" // Untuk file audio umum
+                    "file" -> "📄 ${fileName ?: "File"}"
                     else -> "Sent an attachment"
                 }
-                // Sekarang update node 'chats' dengan status "sent"
                 updateChatListNode(
                     participant1Id = senderId,
                     participant2Id = receiverId,
                     lastMessage = lastMessageDisplay,
                     timestamp = System.currentTimeMillis(),
                     actualLastMessageSenderId = senderId,
-                    newStatus = "sent" // <--- STATUS "SENT" SAAT MENGIRIM
+                    newStatus = "sent"
                 )
             }
             .addOnFailureListener { e ->
@@ -223,7 +244,7 @@ class MessageChatActivity : AppCompatActivity(), SoundSelectionListener {
         lastMessage: String,
         timestamp: Long,
         actualLastMessageSenderId: String,
-        newStatus: String // Tambahkan parameter status baru
+        newStatus: String
     ) {
         if (chatId == null || chatDetailsRef == null) {
             Log.e(TAG, "chatId or chatDetailsRef is null in updateChatListNode. Cannot update chat node.")
@@ -239,16 +260,8 @@ class MessageChatActivity : AppCompatActivity(), SoundSelectionListener {
                 participant2Id to true
             ),
             "isGroupChat" to false,
-            "lastMessageStatus" to newStatus // <--- GUNAKAN newStatus DI SINI
+            "lastMessageStatus" to newStatus
         )
-
-        // Jika penerima adalah partisipan1, tambahkan unreadCount untuknya (opsional)
-        // if (participant1Id != actualLastMessageSenderId) {
-        //     chatInfo["unreadCount_${participant1Id}"] = FieldValue.increment(1)
-        // } else if (participant2Id != actualLastMessageSenderId) {
-        //     chatInfo["unreadCount_${participant2Id}"] = FieldValue.increment(1)
-        // }
-
 
         chatDetailsRef!!.updateChildren(chatInfo)
             .addOnSuccessListener { Log.d(TAG, "Chat list node '$chatId' updated. Sender: $actualLastMessageSenderId, Status: $newStatus") }
@@ -272,27 +285,15 @@ class MessageChatActivity : AppCompatActivity(), SoundSelectionListener {
                 val lastMessageSenderId = snapshot.child("lastMessageSenderId").getValue(String::class.java)
                 val currentStatus = snapshot.child("lastMessageStatus").getValue(String::class.java)
 
-                // Hanya proses jika pesan terakhir BUKAN dari pengguna saat ini
                 if (lastMessageSenderId != null && lastMessageSenderId != currentUserId) {
                     var newStatusToSet: String? = null
-
-                    // Logika:
-                    // 1. Jika status saat ini "sent" (dari pengirim), dan activity ini dibuka oleh penerima,
-                    //    maka pesan dianggap "delivered" (sampai ke aplikasi penerima yang aktif)
-                    //    dan karena activity chat dibuka, langsung "read".
-                    // 2. Jika status saat ini "delivered" (mungkin dari FCM atau mekanisme lain),
-                    //    dan activity chat dibuka, maka update ke "read".
-
                     if (currentStatus == "sent") {
-                        newStatusToSet = "read" // Langsung "read" karena chatnya dibuka
+                        newStatusToSet = "read"
                         Log.d(TAG, "Chat $chatId: Last message from $lastMessageSenderId was 'sent'. Marking as 'read'.")
                     } else if (currentStatus == "delivered" && currentStatus != "read") {
                         newStatusToSet = "read"
                         Log.d(TAG, "Chat $chatId: Last message from $lastMessageSenderId was 'delivered'. Marking as 'read'.")
                     }
-                    // Tambahkan logika untuk unread count di sini jika ada
-                    // chatDetailsRef!!.child("unreadCount_${currentUserId}").setValue(0)
-
 
                     if (newStatusToSet != null) {
                         chatDetailsRef!!.child("lastMessageStatus").setValue(newStatusToSet)
@@ -322,36 +323,28 @@ class MessageChatActivity : AppCompatActivity(), SoundSelectionListener {
             messagesRef.removeEventListener(messagesListener!!)
         }
         messagesList.clear()
-        // messageAdapter.notifyDataSetChanged() // Tidak perlu jika submitList digunakan oleh adapter, atau jika ini sebelum adapter di-set
 
         messagesListener = object : ChildEventListener {
             override fun onChildAdded(snapshot: DataSnapshot, previousChildName: String?) {
                 try {
                     val chatMessage = snapshot.getValue(ChatMessageModel::class.java)
-                    chatMessage?.messageId = snapshot.key ?: "" // Ambil key sebagai messageId
+                    chatMessage?.messageId = snapshot.key ?: ""
                     if (chatMessage != null) {
                         messagesList.add(chatMessage)
                         messageAdapter.notifyItemInserted(messagesList.size - 1)
                         binding.recycleViewChats.scrollToPosition(messagesList.size - 1)
 
-                        // Logika "Delivered" Sederhana (ketika penerima aktif dan memuat pesan):
-                        // Jika pesan ini dari lawan bicara DAN belum ada status "delivered" atau "read" di node 'chats'
-                        // maka kita bisa update node 'chats' ke "delivered".
-                        // Ini akan terjadi jika penerima membuka chat sebelum 'markChatMessagesAsReadOrDelivered' di onResume sempat berjalan untuk status "sent".
                         if (chatMessage.sender == recipientUserId && firebaseUser?.uid == currentUserId) {
-                            // Pengguna saat ini adalah penerima pesan ini.
-                            // Cek status di node 'chats'
                             chatDetailsRef?.addListenerForSingleValueEvent(object: ValueEventListener {
                                 override fun onDataChange(chatSnapshot: DataSnapshot) {
                                     val currentChatStatus = chatSnapshot.child("lastMessageStatus").getValue(String::class.java)
                                     val lastChatSender = chatSnapshot.child("lastMessageSenderId").getValue(String::class.java)
-                                    // Hanya update ke delivered jika pesan terakhir adalah dari lawan dan statusnya masih 'sent'
                                     if (lastChatSender == recipientUserId && currentChatStatus == "sent") {
                                         updateChatListNode(
-                                            participant1Id = currentUserId!!, // urutan bisa jadi penting jika chatId bergantung padanya
+                                            participant1Id = currentUserId!!,
                                             participant2Id = recipientUserId!!,
-                                            lastMessage = chatMessage.message ?: "Attachment", // Gunakan pesan aktual
-                                            timestamp = chatMessage.timestamp, // Gunakan timestamp aktual
+                                            lastMessage = chatMessage.message ?: "Attachment",
+                                            timestamp = chatMessage.timestamp,
                                             actualLastMessageSenderId = chatMessage.sender!!,
                                             newStatus = "delivered"
                                         )
@@ -363,8 +356,6 @@ class MessageChatActivity : AppCompatActivity(), SoundSelectionListener {
                                 }
                             })
                         }
-
-
                     }
                 } catch (e: Exception) {
                     Log.e(TAG, "Error processing new message from Firebase.", e)
@@ -388,12 +379,15 @@ class MessageChatActivity : AppCompatActivity(), SoundSelectionListener {
             }
 
             override fun onChildRemoved(snapshot: DataSnapshot) {
-                // ... (implementasi Anda sudah baik)
+                val removedMessageId = snapshot.key
+                val index = messagesList.indexOfFirst { it.messageId == removedMessageId }
+                if (index != -1) {
+                    messagesList.removeAt(index)
+                    messageAdapter.notifyItemRemoved(index)
+                }
             }
 
-            override fun onChildMoved(snapshot: DataSnapshot, previousChildName: String?) {
-                // Biasanya tidak digunakan
-            }
+            override fun onChildMoved(snapshot: DataSnapshot, previousChildName: String?) { /* Not used */ }
 
             override fun onCancelled(error: DatabaseError) {
                 Log.e(TAG, "Failed to load messages.", error.toException())
@@ -405,8 +399,10 @@ class MessageChatActivity : AppCompatActivity(), SoundSelectionListener {
 
     private fun openAttachmentPicker() {
         val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
-            type = "*/*"
+            type = "*/*" // Memungkinkan semua jenis file untuk dipilih
             addCategory(Intent.CATEGORY_OPENABLE)
+            // Untuk memilih multiple file (opsional):
+            // putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
         }
         try {
             attachmentPickerLauncher.launch(Intent.createChooser(intent, "Select a File"))
@@ -414,6 +410,103 @@ class MessageChatActivity : AppCompatActivity(), SoundSelectionListener {
             Toast.makeText(this, "Please install a File Manager.", Toast.LENGTH_SHORT).show()
         }
     }
+
+    private fun uploadFileToStorage(fileUri: Uri, storageFolder: String, messageType: String) {
+        if (currentUserId == null || recipientUserId == null || chatId == null) {
+            Toast.makeText(this, "Cannot upload file: User or chat data missing.", Toast.LENGTH_SHORT).show()
+            Log.e(TAG, "uploadFileToStorage: currentUserId, recipientUserId, or chatId is null.")
+            return
+        }
+
+        // Tampilkan ProgressBar (Anda perlu menambahkannya ke layout XML Anda)
+        // binding.uploadProgressBar.visibility = View.VISIBLE // Contoh
+
+        val originalFileName = getFileName(fileUri) ?: "file" // Dapatkan nama file asli
+        // Buat nama file unik di storage, tapi tetap pertahankan ekstensi asli jika ada
+        val fileExtension = originalFileName.substringAfterLast('.', "")
+        val uniqueFileNameInStorage = if (fileExtension.isNotEmpty()) {
+            "${UUID.randomUUID()}_${System.currentTimeMillis()}.$fileExtension"
+        } else {
+            "${UUID.randomUUID()}_${System.currentTimeMillis()}"
+        }
+
+
+        val storageRef: StorageReference = FirebaseStorage.getInstance().reference
+            .child("chat_attachments")
+            .child(chatId!!) // Menggunakan chatId untuk subfolder
+            .child(storageFolder) // "images", "videos", "files", "audios"
+            .child(uniqueFileNameInStorage)
+
+        Log.d(TAG, "Uploading to: ${storageRef.path}")
+
+        storageRef.putFile(fileUri)
+            .addOnSuccessListener { taskSnapshot ->
+                storageRef.downloadUrl.addOnSuccessListener { uri ->
+                    val downloadUrl = uri.toString()
+                    Log.d(TAG, "File uploaded successfully. Download URL: $downloadUrl. Original name: $originalFileName")
+
+                    // Teks pesan bisa berupa nama file untuk tipe attachment
+                    val messageTextForAttachment = when (messageType) {
+                        "image" -> "Image: $originalFileName" // Atau bisa kosong jika MessageAdapter menangani tampilan
+                        "video" -> "Video: $originalFileName"
+                        "audio" -> "Audio: $originalFileName"
+                        "file" -> "File: $originalFileName"
+                        else -> originalFileName // Fallback
+                    }
+
+                    sendMessageToUser(
+                        senderId = currentUserId!!,
+                        receiverId = recipientUserId!!,
+                        message = messageTextForAttachment, // Teks deskriptif atau nama file
+                        messageType = messageType,
+                        fileUrl = downloadUrl,
+                        fileName = originalFileName // Kirim nama file asli untuk ditampilkan
+                    )
+                    // binding.uploadProgressBar.visibility = View.GONE
+                }.addOnFailureListener { e ->
+                    Log.e(TAG, "Failed to get download URL", e)
+                    Toast.makeText(this, "Failed to get download URL: ${e.message}", Toast.LENGTH_SHORT).show()
+                    // binding.uploadProgressBar.visibility = View.GONE
+                }
+            }
+            .addOnFailureListener { e ->
+                Log.e(TAG, "Failed to upload file to Firebase Storage", e)
+                Toast.makeText(this, "Upload failed: ${e.message}", Toast.LENGTH_SHORT).show()
+                // binding.uploadProgressBar.visibility = View.GONE
+            }
+            .addOnProgressListener { taskSnapshot ->
+                val progress = (100.0 * taskSnapshot.bytesTransferred / taskSnapshot.totalByteCount)
+                Log.d(TAG, "Upload is $progress% done")
+                // binding.uploadProgressBar.progress = progress.toInt() // Update progress bar
+            }
+    }
+
+    // Fungsi helper untuk mendapatkan nama file dari URI
+    @SuppressLint("Range")
+    private fun getFileName(uri: Uri): String? {
+        var result: String? = null
+        if (uri.scheme == "content") {
+            val cursor: Cursor? = contentResolver.query(uri, null, null, null, null)
+            try {
+                if (cursor != null && cursor.moveToFirst()) {
+                    result = cursor.getString(cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME))
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error getting file name from content URI", e)
+            } finally {
+                cursor?.close()
+            }
+        }
+        if (result == null) {
+            result = uri.path
+            val cut = result?.lastIndexOf('/')
+            if (cut != -1 && cut != null) {
+                result = result.substring(cut + 1)
+            }
+        }
+        return result
+    }
+
 
     private fun showSoundPickerBottomSheet() {
         if (currentUserId == null) {
@@ -434,7 +527,7 @@ class MessageChatActivity : AppCompatActivity(), SoundSelectionListener {
         sendMessageToUser(
             senderId = currentUserId!!,
             receiverId = recipientUserId!!,
-            message = "Sent a sound: ${soundItem.title}",
+            message = "Sent a sound: ${soundItem.title}", // Teks placeholder atau judul suara
             messageType = "sound",
             fileUrl = soundItem.soundUrl,
             soundTitle = soundItem.title
@@ -443,43 +536,17 @@ class MessageChatActivity : AppCompatActivity(), SoundSelectionListener {
 
     override fun onStop() {
         super.onStop()
-        // Hapus listener pesan jika activity tidak lagi visible
         messagesListener?.let {
             messagesRef.removeEventListener(it)
-            // messagesListener = null; // Bisa di-null-kan di sini jika tidak ada onRestart yang mengandalkannya
-        }
-        // Hapus listener status chat jika ada
-        chatStatusListener?.let {
-            chatDetailsRef?.removeEventListener(it)
-            // chatStatusListener = null;
         }
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        // Pastikan semua listener dihapus untuk menghindari memory leak
         messagesListener?.let {
             messagesRef.removeEventListener(it)
         }
         messagesListener = null
-
-        chatStatusListener?.let {
-            chatDetailsRef?.removeEventListener(it)
-        }
-        chatStatusListener = null
+        // chatStatusListener tidak diinisialisasi, jadi tidak perlu dihapus
     }
-
-    // onRestart tidak selalu dibutuhkan jika onResume sudah menangani attach listener
-    // Namun, jika Anda secara eksplisit detach di onStop, Anda perlu re-attach di onStart atau onRestart.
-    // Karena attachMessagesListener dipanggil di onCreate dan markChatMessagesAsReadOrDelivered di onResume,
-    // seharusnya sudah cukup.
-    // override fun onRestart() {
-    //     super.onRestart()
-    //     if (chatId != null && ::messagesRef.isInitialized) {
-    //         attachMessagesListener() // Pasang kembali listener pesan
-    //         // Jika Anda menggunakan chatStatusListener untuk real-time update, pasang juga di sini
-    //     }
-    //     // Anda mungkin juga ingin memanggil markChatMessagesAsReadOrDelivered() di sini
-    //     // atau pastikan onResume melakukannya.
-    // }
 }

@@ -28,22 +28,38 @@ class MessageAdapter(
         const val MSG_TYPE_RIGHT = 1
         const val MSG_TYPE_LEFT_SOUND = 2 // Baru
         const val MSG_TYPE_RIGHT_SOUND = 3 // Baru
+        const val MSG_TYPE_LEFT_IMAGE = 4 // BARU
+        const val MSG_TYPE_RIGHT_IMAGE = 5 // BARU
+        const val MSG_TYPE_LEFT_VIDEO = 6 // BARU
+        const val MSG_TYPE_RIGHT_VIDEO = 7 // BARU
+        const val MSG_TYPE_LEFT_FILE = 8  // BARU
+        const val MSG_TYPE_RIGHT_FILE = 9 // BARU
+        const val MSG_TYPE_LEFT_AUDIO = 10 // BARU - untuk file audio umum
+        const val MSG_TYPE_RIGHT_AUDIO = 11 // BARU
         // Tambahkan view type lain jika perlu (image, file, dll.)
     }
 
     override fun getItemViewType(position: Int): Int {
         val message = messageList[position]
-        return if (message.sender == currentUserId) {
+        return if (message.sender == currentUserId) { // Pesan dikirim oleh pengguna saat ini (kanan)
             when (message.type) {
+                "text" -> MSG_TYPE_RIGHT
                 "sound" -> MSG_TYPE_RIGHT_SOUND
-                // "image" -> MSG_TYPE_RIGHT_IMAGE
-                else -> MSG_TYPE_RIGHT
+                "image" -> MSG_TYPE_RIGHT_IMAGE
+                "video" -> MSG_TYPE_RIGHT_VIDEO
+                "audio" -> MSG_TYPE_RIGHT_AUDIO // Untuk file audio umum
+                "file" -> MSG_TYPE_RIGHT_FILE
+                else -> MSG_TYPE_RIGHT // Default
             }
-        } else {
+        } else { // Pesan diterima (kiri)
             when (message.type) {
+                "text" -> MSG_TYPE_LEFT
                 "sound" -> MSG_TYPE_LEFT_SOUND
-                // "image" -> MSG_TYPE_LEFT_IMAGE
-                else -> MSG_TYPE_LEFT
+                "image" -> MSG_TYPE_LEFT_IMAGE
+                "video" -> MSG_TYPE_LEFT_VIDEO
+                "audio" -> MSG_TYPE_LEFT_AUDIO // Untuk file audio umum
+                "file" -> MSG_TYPE_LEFT_FILE
+                else -> MSG_TYPE_LEFT // Default
             }
         }
     }
