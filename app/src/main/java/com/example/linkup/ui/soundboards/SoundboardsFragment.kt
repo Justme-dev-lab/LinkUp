@@ -43,6 +43,9 @@ import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
+// Di SoundboardsFragment.kt
+import com.example.linkup.utils.Event // atau path yang benar ke Event.kt
+import com.example.linkup.utils.EventObserver // atau path yang benar ke Event.kt
 
 class SoundboardsFragment : Fragment(), BottomNavHeightListener {
 
@@ -383,14 +386,13 @@ class SoundboardsFragment : Fragment(), BottomNavHeightListener {
             }
         }
 
-        soundboardsViewModel.closeDialogEvent.observe(viewLifecycleOwner) { event ->
-            event?.getContentIfNotHandled()?.let {
-                alertDialog?.dismiss()
-                alertDialog = null
-                selectedAudioUri = null
-                selectedFileInfoTextView?.text = "No file selected"
-            }
-        }
+        soundboardsViewModel.closeDialogEvent.observe(viewLifecycleOwner, EventObserver { unitContent: Unit -> // Tentukan tipe Unit secara eksplisit
+            alertDialog?.dismiss()
+            alertDialog = null
+            selectedAudioUri = null
+            selectedFileInfoTextView?.text = "No file selected"
+            Log.d("SoundFragment", "closeDialogEvent observed and handled by EventObserver")
+        })
     }
 
     private fun showDeleteConfirmationDialog(soundItem: SoundItem) {

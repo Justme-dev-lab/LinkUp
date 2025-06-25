@@ -1,5 +1,6 @@
 package com.example.linkup.adapter
 
+import android.annotation.SuppressLint
 import android.app.DownloadManager
 import android.content.ActivityNotFoundException
 import android.content.Context
@@ -48,6 +49,19 @@ class MessageAdapter(
         const val MSG_TYPE_RIGHT_AUDIO = 11
 
         private const val TAG = "MessageAdapter"
+    }
+
+    @SuppressLint("NotifyDataSetChanged") // Tambahkan anotasi ini jika menggunakan notifyDataSetChanged
+    fun updateMessages(newMessages: List<ChatMessageModel>) {
+        // Hentikan pemutaran media jika ada daftar pesan baru yang signifikan
+        // Ini opsional, tergantung apakah Anda ingin audio berhenti saat pesan baru dimuat ulang
+        // releaseMediaPlayer()
+
+        this.messageList.clear()
+        this.messageList.addAll(newMessages)
+        notifyDataSetChanged() // Ini akan memberi tahu RecyclerView untuk menggambar ulang semua item.
+        // Untuk performa yang lebih baik di masa depan, pertimbangkan DiffUtil.
+        Log.d(TAG, "Adapter messages updated. New count: ${newMessages.size}")
     }
 
     override fun getItemViewType(position: Int): Int {

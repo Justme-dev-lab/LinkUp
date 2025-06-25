@@ -8,7 +8,7 @@ import android.view.ViewGroup
 import android.widget.Toast
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.example.linkup.MessageChatActivity
+import com.example.linkup.ui.message.MessageChatActivity
 import com.example.linkup.databinding.FragmentSoundPickerBottomSheetBinding // Buat layout ini
 import com.example.linkup.model.SoundItem
 import com.example.linkup.ui.soundboards.SoundAdapter // Kita bisa gunakan adapter yang sama

@@ -32,7 +32,7 @@
             android:name=".SelectChatsArchiveActivity"
             android:exported="false" />
         <activity
-            android:name=".MessageChatActivity"
+            android:name=".ui.message.MessageChatActivity"
             android:exported="false" />
         <activity
             android:name=".EditProfileActivity"

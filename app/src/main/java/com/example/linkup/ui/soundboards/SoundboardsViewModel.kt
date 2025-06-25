@@ -14,7 +14,7 @@ import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.storage.StorageReference
 import com.example.linkup.R
 import com.example.linkup.model.SoundItem
-import com.example.linkup.util.Event
+import com.example.linkup.utils.Event
 import java.util.UUID
 
 class SoundboardsViewModel(application: Application) : AndroidViewModel(application) {
