@@ -9,7 +9,7 @@
     <item
         android:id="@+id/navigation_soundboards"
         android:icon="@drawable/ic_soundboards"
-        android:title="@string/title_soundboards" />
+        android:title="@string/title_soundboard" />
 
     <item
         android:id="@+id/navigation_settings"

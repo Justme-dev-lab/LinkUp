@@ -1,7 +1,7 @@
 <resources>
     <string name="app_name">LinkUp</string>
     <string name="title_chats">Chats</string>
-    <string name="title_soundboards">Soundboards</string>
+    <string name="title_soundboard">Soundboard</string>
     <string name="title_settings">Settings</string>
     <!-- ... string lain ... -->
     <string name="sound_title_hint">Sound Title</string>
