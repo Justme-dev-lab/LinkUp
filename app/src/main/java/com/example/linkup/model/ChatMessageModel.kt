@@ -12,8 +12,9 @@ data class ChatMessageModel(
     var isseen: Boolean = false,
     var type: String = "text",    // "text", "image", "audio", "file", "sound"
     var fileUrl: String? = null,   // URL untuk image, audio (non-soundboard), file
-    var soundTitle: String? = null // Judul suara dari soundboard
+    var soundTitle: String? = null,
+    var fileName: String? = null // Judul suara dari soundboard
 ) {
     // Konstruktor tanpa argumen untuk Firebase
-    constructor() : this("", "", "", "", 0L, false, "text", null, null)
+    constructor() : this("", "", "", "", 0L, false, "text", null, null, null)
 }

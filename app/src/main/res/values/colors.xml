@@ -11,6 +11,7 @@
     <color name="read_status">#4CAF50</color> <!-- Hijau -->
     <color name="delivered_status">#2196F3</color> <!-- Biru -->
     <color name="sent_status">#9E9E9E</color>
+    <color name="grey">#929292</color>
     <color name="sound_item_playing_background">#FFE0B2</color> <!-- Contoh warna oranye muda -->
     <color name="sound_item_default_background">#F5F5F5</color> <!-- Abu-abu -->
 </resources>
