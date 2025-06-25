@@ -26,6 +26,9 @@
         android:theme="@style/Theme.LinkUp"
         tools:targetApi="31">
         <activity
+            android:name=".MediaViewActivity"
+            android:exported="false" />
+        <activity
             android:name=".SelectChatsArchiveActivity"
             android:exported="false" />
         <activity

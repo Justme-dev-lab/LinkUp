@@ -23,4 +23,22 @@
     </string>
     <!-- other strings -->
     <string name="user_not_logged_in">User not logged in.</string>
+    <!-- ... string lain yang sudah ada ... -->
+
+    <string name="fullscreen_image_preview">Fullscreen image preview</string>
+
+    <!-- String yang mungkin sudah Anda tambahkan sebelumnya atau perlukan: -->
+    <string name="view_image_title">View Image</string>
+    <string name="view_video_title">View Video</string>
+    <string name="media_url_not_available">Media URL is not available.</string>
+    <string name="unsupported_media_type">Unsupported media type.</string>
+    <string name="failed_to_load_image">Failed to load image.</string>
+    <string name="error_playing_video">Error playing video</string>
+    <string name="ic_broken_image_description">Broken image placeholder</string>
+
+
+    <!-- Contoh string lain yang mungkin berguna -->
+    <string name="chats_title">Chats</string>
+    <string name="settings_title">Settings</string>
+    <string name="profile_title">Profile</string>
 </resources>

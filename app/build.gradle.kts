@@ -73,4 +73,9 @@ dependencies {
     annotationProcessor("com.github.bumptech.glide:compiler:4.16.0")
     implementation("com.github.bumptech.glide:glide:4.16.0") // Versi terbaru
     implementation("de.hdodenhof:circleimageview:3.1.0") // Versi terbaru
+    val exoplayerVersion = "2.19.1" // Gunakan versi terbaru yang stabil
+    implementation("com.google.android.exoplayer:exoplayer-core:$exoplayerVersion")
+    implementation("com.google.android.exoplayer:exoplayer-ui:$exoplayerVersion")
+
+
 }
