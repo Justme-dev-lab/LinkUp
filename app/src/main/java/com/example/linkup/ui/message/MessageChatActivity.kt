@@ -219,9 +219,11 @@ class MessageChatActivity : AppCompatActivity(), SoundSelectionListener {
         }
         if (result == null) {
             result = uri.path
-            val cut = result?.lastIndexOf('/')
-            if (cut != -1 && cut != null) {
-                result = result.substring(cut + 1)
+            result?.let { currentResult -> // Hanya proses jika path tidak null
+                val cut = currentResult.lastIndexOf('/')
+                if (cut != -1) { // Tidak perlu cut != null karena lastIndexOf pada non-null string tidak akan null
+                    result = currentResult.substring(cut + 1)
+                }
             }
         }
         return result

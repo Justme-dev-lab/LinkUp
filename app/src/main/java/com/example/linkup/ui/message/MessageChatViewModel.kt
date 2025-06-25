@@ -32,6 +32,7 @@ class MessageChatViewModel(application: Application) : AndroidViewModel(applicat
     private lateinit var messagesRef: DatabaseReference
     private lateinit var chatDetailsRef: DatabaseReference
     private var chatId: String? = null
+    private var isChatSetupCompleted: Boolean = false // Flag untuk status setup
 
     private val _messagesList = MutableLiveData<List<ChatMessageModel>>()
     val messagesList: LiveData<List<ChatMessageModel>> = _messagesList
@@ -58,8 +59,16 @@ class MessageChatViewModel(application: Application) : AndroidViewModel(applicat
     fun setupChat(recipientId: String) {
         this.recipientUserId = recipientId
         if (currentUserId == null) {
-            Log.e(TAG, "Current user ID is null. Cannot setup chat.")
-            // Mungkin kirim event error ke Activity untuk menutup
+            Log.e(TAG, "setupChat: Current user ID is null. Cannot proceed.")
+            _isLoading.postValue(false) // Gunakan postValue
+            isChatSetupCompleted = false
+            return
+        }
+
+        if (recipientId.isBlank()) { // Tambahan pemeriksaan untuk recipientId
+            Log.e(TAG, "setupChat: Recipient ID is blank. Cannot proceed.")
+            _isLoading.postValue(false) // GANTI KE postValue
+            isChatSetupCompleted = false
             return
         }
 
@@ -68,8 +77,23 @@ class MessageChatViewModel(application: Application) : AndroidViewModel(applicat
         } else {
             "$recipientId-${currentUserId!!}"
         }
+
+        // Validasi chatId (opsional, tapi bisa membantu jika ada karakter aneh)
+        if (chatId!!.contains(Regex("[.#$\\[\\]]"))) {
+            Log.e(TAG, "setupChat: Generated chatId '$chatId' contains invalid characters.")
+            _isLoading.postValue(false) // GANTI KE postValue
+            isChatSetupCompleted = false
+            this.chatId = null
+            return
+        }
+
+        Log.i(TAG, "setupChat: Chat configured. chatId: $chatId")
         messagesRef = database.getReference("messages").child(chatId!!)
         chatDetailsRef = database.getReference("chats").child(chatId!!)
+
+        isChatSetupCompleted = true // Tandai setup selesai
+
+        // Lanjutkan dengan attachMessagesListenerInternal dan markChatMessagesAsReadOrDeliveredOnSetup
         attachMessagesListenerInternal()
         markChatMessagesAsReadOrDeliveredOnSetup()
     }
@@ -170,8 +194,15 @@ class MessageChatViewModel(application: Application) : AndroidViewModel(applicat
         soundTitle: String? = null,
         fileName: String? = null
     ) {
-        if (currentUserId == null || recipientUserId == null || chatId == null) {
-            _messageSentStatus.value = Event(false)
+        if (!isChatSetupCompleted || chatId == null) {
+            Log.e(TAG, "sendMessage: Chat setup is not complete or chatId is null. Cannot send message. isChatSetupCompleted: $isChatSetupCompleted, chatId: $chatId")
+            _messageSentStatus.postValue(Event(false)) // Gunakan postValue jika ini bisa dipanggil dari berbagai thread
+            _isLoading.postValue(false)
+            return
+        }
+
+        if (currentUserId == null || recipientUserId == null) {
+            _messageSentStatus.postValue(Event(false))
             Log.e(TAG, "Cannot send message: User or chat data missing.")
             return
         }
@@ -179,9 +210,19 @@ class MessageChatViewModel(application: Application) : AndroidViewModel(applicat
         val sender = currentUserId!!
         val receiver = recipientUserId!!
 
-        _isLoading.value = true
-        viewModelScope.launch(Dispatchers.IO) {
+        _isLoading.postValue(true) // Gunakan postValue jika sendMessage bisa dipanggil dari background thread
+        // Atau, jika Anda selalu membungkus panggilan ke sendMessage dengan withContext(Dispatchers.Main)
+        // dari uploadFileToStorage, maka _isLoading.value = true aman di dalam withContext(Dispatchers.Main) tersebut.
+
+        viewModelScope.launch { // Default ke Dispatchers.Main.immediate jika coroutine builder tidak menentukan dispatcher lain
             try {
+                if (!::messagesRef.isInitialized) {
+                    Log.e(TAG, "sendMessage: messagesRef is not initialized!")
+                    _messageSentStatus.value = Event(false)
+                    _isLoading.value = false
+                    return@launch
+                }
+
                 val messagePushRef = messagesRef.push()
                 val messageId = messagePushRef.key ?: UUID.randomUUID().toString()
 
@@ -192,12 +233,13 @@ class MessageChatViewModel(application: Application) : AndroidViewModel(applicat
                 messageData["message"] = messageText
                 messageData["timestamp"] = System.currentTimeMillis()
                 messageData["type"] = messageType
-                messageData["isseen"] = false // Default
+                messageData["isseen"] = false
 
                 fileUrl?.let { messageData["fileUrl"] = it }
                 fileName?.let { if (messageType != "text" && messageType != "sound") messageData["fileName"] = it }
                 soundTitle?.let { if (messageType == "sound") messageData["soundTitle"] = it }
 
+                // Operasi database sekarang akan dieksekusi di Main thread karena context coroutine launch ini
                 messagePushRef.setValue(messageData).await()
                 Log.d(TAG, "Message sent to 'messages' node (type: $messageType).")
 
@@ -217,21 +259,16 @@ class MessageChatViewModel(application: Application) : AndroidViewModel(applicat
                     lastMessage = lastMessageDisplay,
                     timestamp = System.currentTimeMillis(),
                     actualLastMessageSenderId = sender,
-                    newStatus = "sent" // Pesan yang dikirim selalu 'sent' awalnya
-                ).await()
+                    newStatus = "sent"
+                ).await() // Ini juga akan berjalan di Main thread
 
-                withContext(Dispatchers.Main) {
-                    _messageSentStatus.value = Event(true)
-                }
+                _messageSentStatus.value = Event(true)
+
             } catch (e: Exception) {
                 Log.e(TAG, "Error sending message", e)
-                withContext(Dispatchers.Main) {
-                    _messageSentStatus.value = Event(false)
-                }
+                _messageSentStatus.value = Event(false)
             } finally {
-                withContext(Dispatchers.Main) {
-                    _isLoading.value = false
-                }
+                _isLoading.value = false
             }
         }
     }
@@ -245,6 +282,23 @@ class MessageChatViewModel(application: Application) : AndroidViewModel(applicat
         actualLastMessageSenderId: String,
         newStatus: String
     ): Task<Void> { // Mengembalikan Task agar bisa di-await
+        // 1. Pemeriksaan awal: Apakah setup chat sudah selesai dan chatId ada?
+        if (!isChatSetupCompleted || chatId == null) {
+            val errorMessage = "updateChatListNodeInternal: Chat setup not complete or chatId is null. " +
+                    "isChatSetupCompleted: $isChatSetupCompleted, chatId: $chatId"
+            Log.e(TAG, errorMessage)
+            return Tasks.forException(IllegalStateException(errorMessage))
+        }
+
+        // 2. Pemeriksaan kedua: Apakah referensi database (chatDetailsRef) sudah diinisialisasi?
+        // Ini adalah pemeriksaan defensif; jika isChatSetupCompleted true dan chatId tidak null,
+        // chatDetailsRef seharusnya sudah diinisialisasi di setupChat.
+        if (!::chatDetailsRef.isInitialized) {
+            val errorMessage = "updateChatListNodeInternal: chatDetailsRef is not initialized! This should not happen if chat setup was complete."
+            Log.e(TAG, errorMessage)
+            return Tasks.forException(IllegalStateException(errorMessage))
+        }
+
         val chatInfo = mutableMapOf<String, Any>(
             "lastMessage" to lastMessage,
             "lastMessageTime" to timestamp,
@@ -256,15 +310,19 @@ class MessageChatViewModel(application: Application) : AndroidViewModel(applicat
             "isGroupChat" to false, // Asumsi bukan group chat untuk konteks ini
             "lastMessageStatus" to newStatus
         )
+
+        Log.d(TAG, "Attempting to update chat list node '$chatId'. Data: $chatInfo")
+
         // Jika chatId tidak null, lakukan update
-        return if (chatId != null) {
-            chatDetailsRef.updateChildren(chatInfo)
-                .addOnSuccessListener { Log.d(TAG, "Chat list node '$chatId' updated. Sender: $actualLastMessageSenderId, Status: $newStatus") }
-                .addOnFailureListener { e -> Log.e(TAG, "Failed to update chat list node '$chatId'", e) }
-        } else {
-            // Kembalikan Task yang gagal jika chatId null
-            Tasks.forException(IllegalStateException("chatId is null, cannot update chat node."))
-        }
+        return chatDetailsRef.updateChildren(chatInfo)
+            .addOnSuccessListener {
+                Log.d(TAG, "Chat list node '$chatId' updated successfully. Sender: $actualLastMessageSenderId, Status: $newStatus")
+            }
+            .addOnFailureListener { e ->
+                Log.e(TAG, "Failed to update chat list node '$chatId'", e)
+                // Anda mungkin ingin melakukan sesuatu di sini, tapi karena mengembalikan Task,
+                // kegagalan akan ditangani oleh pemanggil yang melakukan .await()
+            }
     }
 
 
@@ -274,13 +332,27 @@ class MessageChatViewModel(application: Application) : AndroidViewModel(applicat
         messageType: String,
         originalFileName: String
     ) {
-        if (currentUserId == null || recipientUserId == null || chatId == null) {
-            _fileUploadStatus.value = Event(Pair(false, "User or chat data missing."))
+        if (originalFileName.isBlank()) { // Atau .isNullOrBlank() jika bisa null
+            Log.e(TAG, "uploadFileToStorage: originalFileName is blank. Cannot proceed.")
+            _fileUploadStatus.postValue(Event(Pair(false, "File name is missing.")))
+            _isLoading.postValue(false)
             return
         }
 
-        _isLoading.value = true
-        _fileUploadProgress.value = Event(0) // Mulai progress
+        if (!isChatSetupCompleted || chatId == null) { // Pemeriksaan yang lebih ketat
+            Log.e(TAG, "uploadFileToStorage: Chat setup is not complete or chatId is null. Cannot upload file. isChatSetupCompleted: $isChatSetupCompleted, chatId: $chatId")
+            _fileUploadStatus.postValue(Event(Pair(false, "Chat session not ready.")))
+            _isLoading.postValue(false)
+            return
+        }
+
+        if (currentUserId == null || recipientUserId == null || chatId == null) {
+            _fileUploadStatus.postValue(Event(Pair(false, "User or chat data missing."))) // GANTI
+            return
+        }
+
+        _isLoading.postValue(true)
+        _fileUploadProgress.postValue(Event(0))
 
         viewModelScope.launch(Dispatchers.IO) {
             try {
@@ -338,7 +410,7 @@ class MessageChatViewModel(application: Application) : AndroidViewModel(applicat
                 Log.e(TAG, "Failed to upload file to Firebase Storage", e)
                 withContext(Dispatchers.Main) {
                     _fileUploadStatus.value = Event(Pair(false, e.message ?: "Upload failed"))
-                    _isLoading.value = false // Pastikan isLoading false jika gagal
+//                    _isLoading.value = false // Pastikan isLoading false jika gagal
                 }
             } finally {
                 withContext(Dispatchers.Main) { // Selalu set isLoading false di akhir
@@ -349,8 +421,21 @@ class MessageChatViewModel(application: Application) : AndroidViewModel(applicat
     }
 
     fun markChatMessagesAsReadOnResume() {
-        if (chatId == null || chatDetailsRef == null || currentUserId == null || recipientUserId == null) {
-            Log.w(TAG, "markChatMessagesAsRead: Essential data missing.")
+        // Periksa apakah setup sudah selesai dan chat ID ada
+        if (!isChatSetupCompleted || chatId == null) {
+            Log.w(TAG, "markChatMessagesAsReadOnResume: Chat setup not complete or chatId is null. Cannot proceed.")
+            return
+        }
+
+        // Periksa apakah referensi sudah diinisialisasi (defensif, seharusnya sudah jika setup complete)
+        if (!::chatDetailsRef.isInitialized || !::messagesRef.isInitialized) { // messagesRef juga mungkin relevan
+            Log.w(TAG, "markChatMessagesAsReadOnResume: Database references not initialized. isChatSetupCompleted: $isChatSetupCompleted")
+            return
+        }
+
+        // currentUserId dan recipientUserId juga penting
+        if (currentUserId == null || recipientUserId == null) {
+            Log.w(TAG, "markChatMessagesAsReadOnResume: User IDs are missing.")
             return
         }
         viewModelScope.launch(Dispatchers.IO) {
