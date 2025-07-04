@@ -278,7 +278,7 @@ linkup-android-chat/
 ### 🆘 **Support**
 - **Issues**: Report bugs via GitHub Issues
 - **Documentation**:
-- [Tugas Akhir PAB.pdf](https://github.com/user-attachments/files/20907377/Tugas.Akhir.PAB.pdf)
+- [Tugas Akhir PAB_Kelompok 4.pptx.pdf](https://github.com/user-attachments/files/21052287/Tugas.Akhir.PAB_Kelompok.4.pptx.pdf)
 - [Laporan Projek Akhir PAB.docx](https://github.com/user-attachments/files/20907379/Laporan.Projek.Akhir.PAB.docx)
 - **FAQ**: Common questions answered in Wiki
 
